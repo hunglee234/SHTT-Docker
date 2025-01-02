@@ -15,10 +15,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  username: { type: String, default: "" }, // Tên tài khoản
+  username: { type: String, default: "" },
   role: {
-    type: mongoose.Schema.Types.ObjectId, // Tham chiếu tới _id trong Role - khóa ngoại (foreign key)  - sử dụng Mongoose Population để lấy chi tiết Role khi truy vấn User.
-    ref: "Role", // Đối chiếu với model "Role"
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Role",
     required: true,
   },
   createdDate: {

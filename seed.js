@@ -31,7 +31,6 @@ const seedDatabase = async () => {
     // Tạo người dùng với các role, sử dụng _id của role
     const adminRole = createdRoles.find((role) => role.name === "admin");
     const managerRole = createdRoles.find((role) => role.name === "manager");
-
     const adminPassword = await bcrypt.hash("admin123", 10);
     const managerPassword = await bcrypt.hash("manager123", 10);
 
