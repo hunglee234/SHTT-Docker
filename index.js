@@ -1,10 +1,28 @@
 const express = require("express");
+const cors = require("cors");
+
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const passport = require("passport");
 require("./config/passportGG");
 const connectDB = require("./config/db");
 const app = express();
+const allowedOrigins = ["http://localhost:3000", "http://localhost:3001"];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true); // Cho phép truy cập
+      } else {
+        callback(new Error("Not allowed by CORS")); // Chặn nếu không nằm trong danh sách
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use(express.json()); // Để xử lý dữ liệu JSON từ client
 
 const adminRoutes = require("./routes/admin/adminRoutes");

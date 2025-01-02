@@ -36,20 +36,13 @@ exports.login = async (req, res) => {
 
     // Tạo token JWT
     const token = jwt.sign(
-      { id: user._id, role: user.role.name || user.role }, // Đảm bảo lấy đúng tên role
+      { id: user._id, role: user.role.name || user.role },
       SECRET_KEY,
-      { expiresIn: "1h" }
+      { expiresIn: "1m" }
     );
 
     user.token = token;
     await user.save();
-
-    // const refreshToken = jwt.sign(
-    //   { id: user._id, role: user.role.name || user.role }, // Đảm bảo lấy đúng tên role
-    //   REFRESH_SECRET_KEY,
-    //   { expiresIn: "1h" }
-    // );
-
     // Trả về token và thông tin người dùng
     return res.json({
       message: "Login successful",
