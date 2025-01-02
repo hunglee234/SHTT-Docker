@@ -3,42 +3,48 @@ const { authenticateToken, authorizeRole } = require("../../middleware/auth");
 const router = express.Router();
 const {
   createStaff,
-  listStaff,
+  getFullStaffList,
   getStaffById,
-  updateStaff,
+  updateStaffInfo,
   deleteStaff,
 } = require("../../controllers/admin/managerController");
 
-// Routes Manager
-// Routes liên quan đến tài khoản nhân viên (Manager có thể tạo 2 tài khoản nhân viên)
-router.post(
-  "/staff",
-  authenticateToken,
-  authorizeRole(["manager"]),
-  createStaff
-);
+const {
+  createUserInfo,
+  getUserInfo,
+  updateUserInfo,
+  deleteUserInfo,
+  getAllUsersInfo,
+} = require("../../controllers/user/user");
 
-router.get("/staff", authenticateToken, authorizeRole(["manager"]), listStaff);
+// Tạo mới User + InfoUser
+router.post("/user", createUserInfo);
 
-router.get(
-  "/staff/:id",
-  authenticateToken,
-  authorizeRole(["manager"]),
-  getStaffById
-);
+// Lấy danh sách đầy đủ (Custom route)
+router.get("/staffs", getFullStaffList);
 
-router.put(
-  "/staff/:id",
-  authenticateToken,
-  authorizeRole(["manager"]),
-  updateStaff
-);
+// Lấy danh sách User
+router.get("/users", getAllUsersInfo);
 
-router.delete(
-  "/staff/:id",
-  authenticateToken,
-  authorizeRole(["manager"]),
-  deleteStaff
-);
+// Tạo mới tài khoản nhân viên, cộng tác viên (CTV)
+router.post("/staff", createStaff);
+
+// Lấy thông tin chi tiết nhân viên
+router.get("/staff/:id", getStaffById);
+
+// Cập nhật linh hoạt User + InfoUser + Nhân viên
+router.put("/staff/:id", updateStaffInfo);
+
+// Xóa tài khoản nhân viên
+router.delete("/staff/:accountId", deleteStaff);
+
+// Lấy thông tin đầy đủ User + InfoUser
+router.get("/:userId", getUserInfo);
+
+// Cập nhật linh hoạt User + InfoUser
+router.put("/:userId", updateUserInfo);
+
+// Xóa cả User + InfoUser
+router.delete("/:userId", deleteUserInfo);
 
 module.exports = router;

@@ -1,52 +1,56 @@
 const mongoose = require("mongoose");
+const ManagerAccount = require("../../models/Account/InfoManager");
 
 const serviceSchema = new mongoose.Schema({
+  id: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: () => new mongoose.Types.ObjectId(),
+  },
   serviceName: {
     type: String,
     required: true,
   },
-  shortServiceName: {
-    type: String,
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "CategoryService",
     required: true,
   },
   description: {
     type: String,
-    required: false,
+    default: "",
   },
-  price: {
-    type: Number,
-    required: false,
-  },
-  status: {
-    type: String,
-    enum: ["Nộp đơn", "Hợp lệ", "Cấp bằng"],
-    default: "Nộp đơn",
-  },
-  subServices: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SubService",
-    },
-  ],
-  applicationNumber: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  submissionDate: {
+  createdAt: {
     type: Date,
     default: Date.now,
   },
-  // Phân loại hồ sơ
-  category: {
-    type: String,
-    enum: ["Nhãn hiệu", "Sáng chế", "Bản quyền", "Kiểu dáng công nghiệp"], // Các loại hồ sơ hợp lệ
-    required: true,
+  // Ngày chỉnh sửa
+  updatedAt: {
+    type: Date,
+    default: Date.now,
   },
-  // Số bằng (có thể null ban đầu)
-  patentNumber: {
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId, // Chuyển đổi thành ObjectId tham chiếu tới "Account"
+    ref: "Account", // Chỉ định "Account" là bảng tham chiếu
+    required: false,
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId, // Cũng sử dụng ObjectId cho updatedBy
+    ref: "Account",
+    required: false,
+    default: null,
+  },
+
+  // Hướng dẫn hoặc ghi chú
+  notes: {
     type: String,
     required: false,
+  },
+
+  // Hình ảnh
+  image: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Image",
+    default: null,
   },
 });
 
