@@ -1,5 +1,6 @@
 const Customer = require("../../models/Customer");
-const User = require("../../models/User");
+const User = require("../../models/User/User");
+const InfoUser = require("../../models/User/InfoUser");
 
 // Quản lý khách hàng
 exports.createCustomer = async (req, res) => {
