@@ -38,7 +38,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role.name || user.role },
       SECRET_KEY,
-      { expiresIn: "1m" }
+      { expiresIn: "1h" }
     );
 
     user.token = token;
@@ -47,11 +47,11 @@ exports.login = async (req, res) => {
     return res.json({
       message: "Login successful",
       token,
-      accountType, // User hoặc Account
+      accountType,
       user: {
         id: user._id,
         email: user.email,
-        role: user.role.name || user.role, // Trả về tên role nếu có
+        role: user.role.name || user.role,
       },
     });
   } catch (error) {
@@ -110,7 +110,6 @@ exports.register = async (req, res) => {
 
 exports.logout = (req, res) => {
   try {
-    // Thông báo cho client xóa token
     res.status(200).json({
       message: "Logout successful, please delete the token on client-side.",
     });

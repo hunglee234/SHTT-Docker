@@ -1,30 +1,15 @@
 const express = require("express");
-const cors = require("cors");
-
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
+const { corsMiddleware, securityHeaders } = require("./middleware/corsConfig");
 const passport = require("passport");
 require("./config/passportGG");
 const connectDB = require("./config/db");
 const app = express();
-const allowedOrigins = ["http://localhost:3000", "http://localhost:3001"];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true); // Cho phép truy cập
-      } else {
-        callback(new Error("Not allowed by CORS")); // Chặn nếu không nằm trong danh sách
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-app.use(express.json()); // Để xử lý dữ liệu JSON từ client
-
+//Middleware
+app.use(corsMiddleware);
+app.use(securityHeaders);
+app.use(express.json());
+const { ALL_ROLES } = require("./middleware/constants");
+const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const adminRoutes = require("./routes/admin/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
 const managerRoutes = require("./routes/client/managerRoutes");
@@ -38,12 +23,12 @@ app.use(passport.initialize());
 app.use("/", authRoutes);
 
 // Route dành cho admin
-app.use("/admin", adminRoutes);
+app.use("/admin", authenticateToken, authorizeRole(["Admin"]), adminRoutes);
 
 // Route dành cho client
 app.use("/manager", managerRoutes);
 
-app.use("/user", userRoutes);
+app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 //  cơ chế JWT (JSON Web Token) để xác thực.
 // Route dịch vụ (Yêu cầu xác thực)
 app.use("/service", serviceRoutes);
@@ -54,5 +39,6 @@ app.use("/service", serviceRoutes);
 // app.use("/api", uploadRoutes);
 //
 connectDB(app);
+// Cấu hình CORS
 
 module.exports = app;

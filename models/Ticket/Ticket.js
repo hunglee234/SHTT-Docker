@@ -20,4 +20,6 @@ const TicketSchema = new mongoose.Schema({
   },
 });
 
+// Tạo text index cho trường message
+TicketSchema.index({ message: "text" });
 module.exports = mongoose.model("Ticket", TicketSchema);

@@ -3,7 +3,7 @@ const router = express.Router();
 const passport = require("passport");
 require("../config/passportGG");
 require("../config/passportFB");
-const facebookRoutes = require("../routes/facebook/facebook");
+// const facebookRoutes = require("../routes/facebook/facebook");
 const googleAuthRoutes = require("../routes/google/googleAuthRoutes");
 const {
   register,
@@ -21,7 +21,7 @@ router.post("/login", login);
 router.use("/google", googleAuthRoutes);
 
 // Sử dụng các routes facebook
-router.use("/facebook", facebookRoutes);
+// router.use("/facebook", facebookRoutes);
 
 // Đăng xuất
 router.post("/logout", logout);

@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
+  googleId: {
+    type: String,
+    required: false,
+  },
   id: {
     type: mongoose.Schema.Types.ObjectId, // ID mặc định của MongoDB
     default: () => new mongoose.Types.ObjectId(),

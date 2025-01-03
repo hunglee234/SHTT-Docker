@@ -119,7 +119,7 @@ exports.updateService = async (req, res) => {
         .json({ error: `Category with id '${category}' not found.` });
     }
 
-    const updatedBy = `${role.name} - ${account.fullName}`;
+    const updatedBy = account._id;
     console.log(updatedBy);
     const updatedService = await Service.findByIdAndUpdate(
       id,
@@ -559,7 +559,7 @@ exports.getServiceDetails = async (req, res) => {
 
 // Manager chỉ xóa được đăng ký dịch vụ của khách
 // Xóa dịch vụ
-exports.deleteService = (req, res) => {
+exports.deleteServiceCustomer = (req, res) => {
   const { serviceId } = req.params;
 
   const serviceIndex = services.findIndex((s) => s.id === parseInt(serviceId));

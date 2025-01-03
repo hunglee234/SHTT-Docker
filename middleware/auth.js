@@ -17,8 +17,16 @@ exports.authenticateToken = (req, res, next) => {
 
 // Middleware kiểm tra vai trò
 exports.authorizeRole = (roles) => (req, res, next) => {
+  // Nếu roles không được truyền, trả lỗi
+  if (!roles || roles.length === 0) {
+    return res
+      .status(400)
+      .json({ message: "Roles must be specified for authorization" });
+  }
+
   if (!roles.includes(req.user.role)) {
     return res.status(403).json({ message: "Access denied" });
   }
+
   next();
 };
