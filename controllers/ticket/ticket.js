@@ -95,25 +95,6 @@ exports.updateTicketStatus = async (req, res) => {
   }
 };
 
-// Sửa nội dung ticket
-// exports.updateTicketContent = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const updates = req.body;
-
-//     const ticket = await Ticket.findByIdAndUpdate(id, updates, { new: true });
-
-//     if (!ticket) {
-//       return res.status(404).json({ error: "Ticket not found." });
-//     }
-
-//     res.status(200).json({ message: "Ticket updated successfully!", ticket });
-//   } catch (error) {
-//     console.error("Error updating ticket:", error);
-//     res.status(500).json({ error: "Failed to update ticket." });
-//   }
-// };
-
 // Xóa ticket
 exports.deleteTicket = async (req, res) => {
   try {

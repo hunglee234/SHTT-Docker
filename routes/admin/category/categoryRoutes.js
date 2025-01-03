@@ -1,9 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const {
-  authenticateToken,
-  authorizeRole,
-} = require("../../../middleware/auth");
 
 const {
   createCategory,
@@ -14,26 +10,16 @@ const {
   deleteCategory,
 } = require("../../../controllers/service/categoryController");
 
-router.post("/", authenticateToken, authorizeRole(["Admin"]), createCategory);
+router.post("/", createCategory);
 
-router.get("/", authenticateToken, authorizeRole(["Admin"]), getAllCategory);
+router.get("/", getAllCategory);
 
-router.get(
-  "/:id",
-  authenticateToken,
-  authorizeRole(["Admin"]),
-  getCategoryById
-);
+router.get("/:id", getCategoryById);
 
 // router.put("/staff/:id", updateStaffInfo);
-router.put("/:id", authenticateToken, authorizeRole(["Admin"]), updateCategory);
+router.put("/:id", updateCategory);
 
 // Xóa cả User + InfoUser
-router.delete(
-  "/:id",
-  authenticateToken,
-  authorizeRole(["Admin"]),
-  deleteCategory
-);
+router.delete("/:id", deleteCategory);
 
 module.exports = router;

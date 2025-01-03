@@ -1,4 +1,4 @@
-<html>
+<!-- <html>
   <head>
     <meta
       name="google-signin-client_id"
@@ -32,5 +32,48 @@
       async
       defer
     ></script>
+  </body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login with Google</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .login-container {
+        text-align: center;
+      }
+      .login-btn {
+        background-color: #4285f4;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .login-btn:hover {
+        background-color: #357ae8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h1>Login with Google</h1>
+      <button
+        class="login-btn"
+        onclick="window.location.href='http://localhost:3009/google/auth'"
+      >
+        Login with Google
+      </button>
+    </div>
   </body>
 </html>

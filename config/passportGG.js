@@ -72,7 +72,7 @@ passport.use(
         // const token = jwt.sign({ id: user._id, role: user.role }, SECRET_KEY, {
         //   expiresIn: "1h",
         // });
-
+        
         // Trả về token khi hoàn tất xác thực
         return done(null, token);
       } catch (err) {

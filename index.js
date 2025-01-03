@@ -1,28 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const passport = require("passport");
 require("./config/passportGG");
 const connectDB = require("./config/db");
+const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const app = express();
-const allowedOrigins = ["http://localhost:3000", "http://localhost:3001"];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true); // Cho phép truy cập
-      } else {
-        callback(new Error("Not allowed by CORS")); // Chặn nếu không nằm trong danh sách
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
 app.use(express.json()); // Để xử lý dữ liệu JSON từ client
 
 const adminRoutes = require("./routes/admin/adminRoutes");
@@ -38,7 +22,7 @@ app.use(passport.initialize());
 app.use("/", authRoutes);
 
 // Route dành cho admin
-app.use("/admin", adminRoutes);
+app.use("/admin", authenticateToken, authorizeRole(["Admin"]), adminRoutes);
 
 // Route dành cho client
 app.use("/manager", managerRoutes);

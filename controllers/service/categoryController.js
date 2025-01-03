@@ -2,19 +2,6 @@ const CategoryService = require("../../models/Service/CategoryService");
 const ManagerAccount = require("../../models/Account/InfoManager");
 const Account = require("../../models/Account/Account");
 
-// exports.isAdmin = (req, res) => {
-//   // Kiểm tra vai trò người dùng
-//   if (req.user && req.user.role === "Admin") {
-//     console.log("Bạn là admin và bạn có quyền được tạo");
-//     return res.status(200).json({
-//       message: "Bạn là admin và bạn có quyền được tạo",
-//       data: req.body, // Hoặc trả về dữ liệu tạo thành công
-//     });
-//   } else {
-//     return res.status(403).json({ message: "Bạn không có quyền truy cập" });
-//   }
-// };
-// CREATE
 exports.createCategory = async (req, res) => {
   try {
     const { categoryName, description, createdAt, image } = req.body;
@@ -37,8 +24,8 @@ exports.createCategory = async (req, res) => {
     }
 
     // Kết hợp tên admin và vai trò
-    const createdBy = `${role.name} - ${account.fullName}`;
-    console.log()
+    const createdBy = account._id;
+    console.log();
     // Tạo danh mục với thông tin người tạo là tên admin + vai trò
     const newCategory = new CategoryService({
       categoryName,
@@ -115,8 +102,8 @@ exports.updateCategory = async (req, res) => {
     }
 
     // Kết hợp tên admin và vai trò cho updatedBy
-    const updatedBy = `${role.name} - ${account.fullName}`;
-    console.log(updatedBy);
+    const updatedBy = account._id;
+
     // Cập nhật danh mục
     const updatedCategory = await CategoryService.findByIdAndUpdate(
       id,
@@ -126,8 +113,8 @@ exports.updateCategory = async (req, res) => {
         image: image || null,
         updatedBy,
         updatedAt: new Date(),
-      }
-      // { new: true, runValidators: true } // Trả về document mới nhất sau khi cập nhật
+      },
+      { new: true, runValidators: true } // Trả về document mới nhất sau khi cập nhật
     );
 
     // Kiểm tra nếu không tìm thấy danh mục
