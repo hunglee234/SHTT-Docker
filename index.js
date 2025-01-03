@@ -1,14 +1,15 @@
 const express = require("express");
-const cors = require("cors");
-const mongoose = require("mongoose");
-const bodyParser = require("body-parser");
+const { corsMiddleware, securityHeaders } = require("./middleware/corsConfig");
 const passport = require("passport");
 require("./config/passportGG");
 const connectDB = require("./config/db");
-const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const app = express();
-app.use(express.json()); // Để xử lý dữ liệu JSON từ client
-
+//Middleware
+app.use(corsMiddleware);
+app.use(securityHeaders);
+app.use(express.json());
+const { ALL_ROLES } = require("./middleware/constants");
+const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const adminRoutes = require("./routes/admin/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
 const managerRoutes = require("./routes/client/managerRoutes");
@@ -27,7 +28,7 @@ app.use("/admin", authenticateToken, authorizeRole(["Admin"]), adminRoutes);
 // Route dành cho client
 app.use("/manager", managerRoutes);
 
-app.use("/user", userRoutes);
+app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 //  cơ chế JWT (JSON Web Token) để xác thực.
 // Route dịch vụ (Yêu cầu xác thực)
 app.use("/service", serviceRoutes);
@@ -38,5 +39,6 @@ app.use("/service", serviceRoutes);
 // app.use("/api", uploadRoutes);
 //
 connectDB(app);
+// Cấu hình CORS
 
 module.exports = app;
