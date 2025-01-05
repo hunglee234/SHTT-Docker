@@ -26,7 +26,13 @@ app.use("/", authRoutes);
 app.use("/admin", authenticateToken, authorizeRole(["Admin"]), adminRoutes);
 
 // Route dành cho client
-app.use("/manager", managerRoutes);
+// Bổ sung authenticateToken, authorizeRole(["ManagerManager"])
+app.use(
+  "/manager",
+  authenticateToken,
+  authorizeRole(["Admin", "Manager"]),
+  managerRoutes
+);
 
 app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 //  cơ chế JWT (JSON Web Token) để xác thực.
