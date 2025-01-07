@@ -7,7 +7,7 @@ const infoStaffSchema = new mongoose.Schema({
   },
   avatar: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Image", // Tạo 1 collection avatar-img
+    ref: "Avatar",
     default: null,
   },
   staffCode: { type: String, unique: true, default: "" },
@@ -24,15 +24,9 @@ const infoStaffSchema = new mongoose.Schema({
   joinDate: { type: Date },
   status: {
     type: String,
-    enum: ["Nhân viên chính thức", "Thực tập sinh", "Nhân viên thử việc"],
-    default: "Nhân viên thử việc",
+    enum: ["Hoạt động", "Không hoạt động"],
+    default: "Hoạt động",
   }, // Trạng thái
-  position: {
-    type: String,
-    enum: ["Cộng tác viên", "Nhân viên"],
-    default: "Cộng tác viên",
-    required: true,
-  },
   account: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Account",
@@ -43,7 +37,6 @@ const infoStaffSchema = new mongoose.Schema({
     ref: "Account",
     required: true,
   },
-  branch: { type: String, default: "" },
 });
 
 module.exports = mongoose.model("InfoStaff", infoStaffSchema);
