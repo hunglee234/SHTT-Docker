@@ -4,9 +4,13 @@ const { authenticateToken } = require("../../middleware/auth");
 const router = express.Router();
 
 // Đăng ký dịch vụ (cần đăng nhập)
-router.post("/register", authenticateToken, serviceController.registerService);
+router.post(
+  "/register/:serviceId",
+  authenticateToken,
+  serviceController.registerService
+);
 
-router.put("/update", authenticateToken, serviceController.updateProfileInfo);
+// router.put("/update", authenticateToken, serviceController.updateProfileInfo);
 
 // Xem lịch sử chỉnh sửa hồ sơ đăng ký dịch vụ
 router.get(
@@ -16,15 +20,15 @@ router.get(
 );
 
 // Lấy danh sách dịch vụ (cần đăng nhập)
+// Chức năng xem full Danh sách Hồ sơ đăng ký
 router.get("/list", authenticateToken, serviceController.getServiceList);
 
-// Chi tiết dịch vụ (cần đăng nhập)
+// Chi tiết Hồ sơ (cần đăng nhập)
 router.get(
-  "/:serviceId",
+  "/:profileId",
   authenticateToken,
-  serviceController.getServiceDetails
+  serviceController.getProfileDetails
 );
-
 
 // Quyền này dành cho nhân viên và manager
 // chỉ xóa phần đăng ký dịch vụ của khách

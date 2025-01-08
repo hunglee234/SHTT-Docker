@@ -19,6 +19,7 @@ const profileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     default: () => new mongoose.Types.ObjectId(),
   },
+  profileCode: { type: String, unique: true, default: "" },
   registeredService: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "registeredService",
@@ -34,6 +35,12 @@ const profileSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  processes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Process",
+    },
+  ],
   image: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Image",
@@ -48,6 +55,11 @@ const profileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Service", // Tham chiếu tới Service
     required: true,
+  },
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected", "under review"],
+    default: "pending",
   },
 });
 

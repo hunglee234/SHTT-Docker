@@ -59,6 +59,11 @@ const serviceSchema = new mongoose.Schema({
     ref: "Image",
     default: null,
   },
+  formNumber: {
+    type: Number,
+    required: false,
+    unique: true, // Đảm bảo rằng mỗi số form là duy nhất
+  },
 });
 serviceSchema.index({ serviceName: "text" });
 module.exports = mongoose.model("Service", serviceSchema);

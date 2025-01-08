@@ -8,7 +8,7 @@ const Record = require("../../models/Service/Record");
 const mongoose = require("mongoose");
 const Profile = require("../../models/Service/Profile");
 const Image = require("../../models/image");
-
+const Process = require("../../models/Process");
 // CREATE
 exports.createService = async (req, res) => {
   try {
@@ -220,26 +220,16 @@ exports.deleteService = async (req, res) => {
 
 // Chức năng cho User, Manager, Nhân viên, cộng tác viên
 
+// Thêm Form Đăng Ký vào Schema
 exports.registerService = async (req, res) => {
-  const { serviceId, info, image } = req.body;
+  const { serviceId } = req.params;
+  const { info, image } = req.body;
   const createdUserId = req.user.id;
   if (!mongoose.Types.ObjectId.isValid(serviceId)) {
     return res.status(400).json({ message: "ID dịch vụ không hợp lệ!" });
   }
 
   try {
-    // Kiểm tra nếu người dùng đã đăng ký dịch vụ hay chưa
-    const existingRegistration = await RegisteredService.findOne({
-      serviceId,
-      createdUserId,
-    });
-
-    if (existingRegistration) {
-      return res
-        .status(400)
-        .json({ message: "Bạn đã đăng ký dịch vụ này rồi!" });
-    }
-
     // Tìm dịch vụ
     const service = await Service.findById(serviceId).populate("createdBy");
     if (!service) {
@@ -294,19 +284,18 @@ exports.registerService = async (req, res) => {
         },
       })
       .populate({
-        path: "registeredService", // Tham chiếu đến registeredService
-        select: "managerUserId", // Thay name description bằng các trường bạn muốn lấy
+        path: "registeredService",
+        select: "createdUserId",
+        populate: {
+          path: "createdUserId", // Tham chiếu đến Category trong Service
+          select: "fullName",
+        },
       })
       .populate({
-        path: "createdBy", // Tham chiếu đến Account
-        select: "fullName email", // Chỉ lấy các trường username, email
+        path: "image",
+        select: "fileUrl",
       })
-      .populate({
-        path: "image", // Tham chiếu đến Image
-        select: "fileUrl", // Lấy trường url từ Image
-      });
-
-    console.log(fullProfile);
+      .select("_id status");
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -316,9 +305,7 @@ exports.registerService = async (req, res) => {
 
     return res.status(201).json({
       message: "Đăng ký dịch vụ và tạo hồ sơ thành công!",
-      data: {
-        data: fullProfile,
-      },
+      data: fullProfile,
     });
   } catch (error) {
     console.error(error);
@@ -328,125 +315,148 @@ exports.registerService = async (req, res) => {
   }
 };
 
-exports.updateProfileInfo = async (req, res) => {
-  try {
-    const { profileId, serviceId, updatedInfo } = req.body;
-    const userId = req.userId; // Giả định userId được gắn vào request từ middleware xác thực
+// Update 09/01/2025 updateProfile Info
+// exports.updateProfileInfo = async (req, res) => {
+//   try {
+//     const { profileId, serviceId, updatedInfo } = req.body;
+//     const userId = req.userId; // Giả định userId được gắn vào request từ middleware xác thực
 
-    // Tìm hồ sơ theo profileId và serviceId
-    const profile = await Profile.findOne({
-      _id: profileId,
-      serviceId,
-    }).populate("record");
+//     // Tìm hồ sơ theo profileId và serviceId
+//     const profile = await Profile.findOne({
+//       _id: profileId,
+//       serviceId,
+//     }).populate("record");
 
-    if (!profile) {
-      return res
-        .status(404)
-        .json({ message: "Hồ sơ hoặc dịch vụ không tồn tại" });
-    }
+//     if (!profile) {
+//       return res
+//         .status(404)
+//         .json({ message: "Hồ sơ hoặc dịch vụ không tồn tại" });
+//     }
 
-    // Lấy dữ liệu hiện tại của `info` để so sánh
-    const oldInfo = profile.info;
+//     // Lấy dữ liệu hiện tại của `info` để so sánh
+//     const oldInfo = profile.info;
 
-    // Khởi tạo danh sách thay đổi
-    const changes = [];
+//     // Khởi tạo danh sách thay đổi
+//     const changes = [];
 
-    // Lặp qua các phần tử `info` để so sánh và cập nhật
-    updatedInfo.forEach((newInfo) => {
-      const oldInfoSection = oldInfo.find(
-        (section) => section.type === newInfo.type
-      );
-      if (!oldInfoSection) return;
+//     // Lặp qua các phần tử `info` để so sánh và cập nhật
+//     updatedInfo.forEach((newInfo) => {
+//       const oldInfoSection = oldInfo.find(
+//         (section) => section.type === newInfo.type
+//       );
+//       if (!oldInfoSection) return;
 
-      newInfo.fields.forEach((newField) => {
-        const oldField = oldInfoSection.fields.find(
-          (field) => field.name === newField.name
-        );
-        if (!oldField || oldField.value === newField.value) return;
+//       newInfo.fields.forEach((newField) => {
+//         const oldField = oldInfoSection.fields.find(
+//           (field) => field.name === newField.name
+//         );
+//         if (!oldField || oldField.value === newField.value) return;
 
-        // Ghi nhận thay đổi
-        changes.push({
-          type: newInfo.type,
-          fieldName: newField.name,
-          oldValue: oldField.value,
-          newValue: newField.value,
-        });
+//         // Ghi nhận thay đổi
+//         changes.push({
+//           type: newInfo.type,
+//           fieldName: newField.name,
+//           oldValue: oldField.value,
+//           newValue: newField.value,
+//         });
 
-        // Cập nhật giá trị trong `info`
-        oldField.value = newField.value;
-      });
-    });
+//         // Cập nhật giá trị trong `info`
+//         oldField.value = newField.value;
+//       });
+//     });
 
-    // Nếu không có thay đổi, trả về phản hồi
-    if (changes.length === 0) {
-      return res
-        .status(200)
-        .json({ message: "Không có thay đổi nào được thực hiện" });
-    }
+//     // Nếu không có thay đổi, trả về phản hồi
+//     if (changes.length === 0) {
+//       return res
+//         .status(200)
+//         .json({ message: "Không có thay đổi nào được thực hiện" });
+//     }
 
-    // Kiểm tra xem đã có Record hay chưa
-    let record = await Record.findOne({ profileId });
+//     // Kiểm tra xem đã có Record hay chưa
+//     let record = await Record.findOne({ profileId });
 
-    if (record) {
-      // Cập nhật các thay đổi vào Record hiện tại
-      record.changes.push(...changes);
-      record.updatedAt = new Date();
-      await record.save();
-    } else {
-      // Tạo Record mới nếu chưa tồn tại
-      record = new Record({
-        profileId,
-        userId,
-        changes,
-        updatedAt: new Date(),
-      });
-      await record.save();
+//     if (record) {
+//       // Cập nhật các thay đổi vào Record hiện tại
+//       record.changes.push(...changes);
+//       record.updatedAt = new Date();
+//       await record.save();
+//     } else {
+//       // Tạo Record mới nếu chưa tồn tại
+//       record = new Record({
+//         profileId,
+//         userId,
+//         changes,
+//         updatedAt: new Date(),
+//       });
+//       await record.save();
 
-      // Thêm record mới vào profile
-      profile.record.push(record._id);
-    }
+//       // Thêm record mới vào profile
+//       profile.record.push(record._id);
+//     }
 
-    // Lưu hồ sơ đã cập nhật
-    await profile.save();
+//     // Lưu hồ sơ đã cập nhật
+//     await profile.save();
 
-    // Trả về phản hồi
-    res.status(200).json({
-      message: "Cập nhật thành công",
-      changes,
-      updatedProfile: profile,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Đã xảy ra lỗi khi cập nhật hồ sơ dịch vụ",
-      error: error.message,
-    });
-  }
-};
+//     // Trả về phản hồi
+//     res.status(200).json({
+//       message: "Cập nhật thành công",
+//       changes,
+//       updatedProfile: profile,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({
+//       message: "Đã xảy ra lỗi khi cập nhật hồ sơ dịch vụ",
+//       error: error.message,
+//     });
+//   }
+// };
 
 // Lấy danh sách dịch vụ
 // Nhân viên xem được các dịch vụ mình chịu trách nhiệm
 // User xem được dịch vụ mình đăng ký
 // Manager và Admin xem được hết
-
 exports.getServiceList = async (req, res) => {
   const userId = req.user.id;
-  console.log(userId);
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
   if (!userId) {
     return res.status(400).json({ message: "Thiếu userId trong yêu cầu!" });
   }
 
   try {
-    // Truy vấn danh sách dịch vụ mà userId đã đăng ký
-    const userServices = await RegisteredService.find({ createdUserId: userId })
+    // Truy vấn danh sách dịch vụ mà userId đã đăng ký với phân trang
+    const userServices = await RegisteredService.find({
+      createdUserId: userId,
+    })
+      .skip(skip) // Giới hạn số lượng bản ghi trả về
       .populate({
-        path: "serviceId", // Populate tất cả các trường từ dịch vụ
-      })
-      .sort({ createdAt: -1 }); // Sắp xếp giảm dần theo thời gian tạo
+        path: "serviceId",
+        populate: {
+          path: "category",
+          select: "categoryName",
+        },
+      });
+
+    // Lấy tổng số dịch vụ để tính tổng số trang
+    const totalServices = await RegisteredService.countDocuments({
+      createdUserId: userId,
+    });
+
+    // Tính tổng số trang
+    const totalPages = Math.ceil(totalServices / limit);
 
     return res.status(200).json({
       message: "Danh sách dịch vụ của bạn:",
       data: userServices,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalServices,
+        limit,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -456,46 +466,43 @@ exports.getServiceList = async (req, res) => {
   }
 };
 
-// Chi tiết dịch vụ
-exports.getServiceDetails = async (req, res) => {
-  const { serviceId } = req.params; // Lấy ID của dịch vụ từ URL params
-
+// Chi tiết Hồ sơ
+exports.getProfileDetails = async (req, res) => {
+  const { profileId } = req.params;
+  const userId = req.user.id;
+  console.log(profileId);
   try {
-    // Truy vấn dịch vụ từ cơ sở dữ liệu
-    const service = await Service.findById(serviceId)
-      .populate({
-        path: "createdBy", // Populate thông tin người tạo dịch vụ
-        select: "fullName email", // Chỉ lấy tên và email của người tạo
-      })
-      .populate({
-        path: "category",
-        select: "categoryName",
-      });
+    // Tìm Profile theo profileId và lọc các dịch vụ của userId trong registeredService
+    const profile = await Profile.findOne({ _id: profileId }).populate([
+      {
+        path: "registeredService",
+        match: { createdUserId: userId },
+        populate: {
+          path: "serviceId",
+          select: "serviceName description",
+        },
+      },
+      {
+        path: "processes",
+        select: "processContent completionDate documents",
+      },
+    ]);
 
-    // Kiểm tra nếu không tìm thấy dịch vụ
-    if (!service) {
-      return res.status(404).json({ message: "Không tìm thấy dịch vụ!" });
+    console.log(profile);
+    // Kiểm tra nếu không tìm thấy Profile hoặc RegisteredService
+    if (!profile || !profile.registeredService) {
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy hồ sơ hoặc dịch vụ của người dùng!" });
     }
 
-    console.log(service.category?.categoryName);
-    // Trả về thông tin chi tiết dịch vụ
+    // Trả về thông tin chi tiết Profile và dịch vụ
     return res.status(200).json({
-      message: "Thông tin chi tiết dịch vụ:",
-      data: {
-        id: service._id,
-        name: service.serviceName,
-        description: service.description,
-        category: service.category?.categoryName,
-        createdBy: {
-          name: service.createdBy?.fullName,
-          email: service.createdBy?.email,
-        },
-        createdAt: service.createdAt,
-        updatedAt: service.updatedAt,
-      },
+      message: "Thông tin chi tiết hồ sơ và dịch vụ:",
+      data: profile,
     });
   } catch (error) {
-    console.error("Lỗi khi lấy chi tiết dịch vụ:", error.message);
+    console.error("Lỗi khi lấy chi tiết hồ sơ:", error.message);
 
     // Xử lý lỗi và trả về thông báo phù hợp
     return res.status(500).json({

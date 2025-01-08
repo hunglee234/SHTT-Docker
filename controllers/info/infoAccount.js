@@ -15,25 +15,18 @@ dayjs.extend(customParseFormat);
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.id;
-
+    console.log(userId);
     // Lấy thông tin tài khoản hiện tại
     const account = await Account.findById(userId).populate("role");
+    console.log("a", account);
     if (!account) {
       return res.status(404).json({ error: "Tài khoản không tồn tại." });
     }
 
-    console.log(typeof account._id, account._id);
     let avatarUrl = null;
-    const staff = await StaffAccount.findOne({ account: account._id })
-      .populate({
-        path: "account",
-        select: "fullName email username avatar role password",
-        populate: { path: "role", select: "name" },
-      })
-      .populate({
-        path: "avatar", // Populate thông tin avatar
-        select: "url", // Lấy chỉ trường url của avatar
-      });
+    const staff = await StaffAccount.findOne({ account: account._id }).populate(
+      "account"
+    );
 
     // Kiểm tra nếu không tìm thấy nhân viên
     if (!staff) {

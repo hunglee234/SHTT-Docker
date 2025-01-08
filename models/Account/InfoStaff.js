@@ -30,12 +30,12 @@ const infoStaffSchema = new mongoose.Schema({
   account: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Account",
-    required: true,
+    required: false,
   },
   createdByManager: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Account",
-    required: true,
+    required: false,
   },
 });
 

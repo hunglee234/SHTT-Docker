@@ -4,6 +4,7 @@ const User = require("../../models/User/User");
 const InfoUser = require("../../models/User/InfoUser");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
+const StaffAccount = require("../../models/Account/InfoStaff");
 const SECRET_KEY = "hungdzvclra";
 
 exports.login = async (req, res) => {
@@ -20,6 +21,7 @@ exports.login = async (req, res) => {
       }
     }
 
+    // console.log("b", user._id);
     if (!user) {
       return res.status(404).json({ message: "Email not found" });
     }
@@ -39,12 +41,24 @@ exports.login = async (req, res) => {
 
     user.token = token;
     await user.save();
+
+    const accountWithAvatar = await StaffAccount.findOne({
+      account: user._id,
+    }).populate({
+      path: "avatar",
+      select: "url",
+    });
+
+    // console.log(accountWithAvatar);
+    const avatarUrl = accountWithAvatar.avatar?.url || null;
     // Trả về token và thông tin người dùng
     return res.json({
       message: "Login successful",
       token,
       accountType,
       user: {
+        avatar: avatarUrl,
+        username: user.username,
         id: user._id,
         email: user.email,
         role: user.role.name || user.role,
@@ -60,14 +74,14 @@ exports.register = async (req, res) => {
   const { fullName, email, password } = req.body;
   try {
     // Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const existingAccount = await Account.findOne({ email });
+    if (existingAccount) {
       return res.status(400).json({ message: "Email already exists" });
     }
 
     // Tìm vai trò mặc định "user"
-    const userRole = await Role.findOne({ name: "User" });
-    if (!userRole) {
+    const userAccount = await Role.findOne({ name: "User" });
+    if (!userAccount) {
       return res.status(500).json({ message: "Default role 'user' not found" });
     }
 
@@ -75,28 +89,27 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Tạo người dùng mới với vai trò mặc định
-    const newUser = new User({
+    const newAccount = new Account({
       fullName,
       email,
       password: hashedPassword,
-      role: userRole._id,
+      role: userAccount._id,
     });
 
     // Lưu người dùng vào cơ sở dữ liệu
-    const savedUser = await newUser.save();
+    const savedAccount = await newAccount.save();
 
-    // Tạo InfoUser liên kết với User vừa tạo
-    const newInfoUser = new InfoUser({
-      role: userRole._id,
-      user: savedUser._id,
+    // Tạo InfoAccount
+    const newInfoStaff = new StaffAccount({
+      account: savedAccount._id,
     });
-    const savedInfoUser = await newInfoUser.save();
+    const savedInfoStaff = await newInfoStaff.save();
 
     // Phản hồi thành công
     res.status(201).json({
       message: "Khách hàng đăng ký thành công",
-      user: savedUser,
-      infoUser: savedInfoUser,
+      account: savedAccount,
+      infoStaff: savedInfoStaff,
     });
   } catch (error) {
     console.error(error);
