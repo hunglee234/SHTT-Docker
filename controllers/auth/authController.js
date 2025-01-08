@@ -10,10 +10,6 @@ exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let user = null;
-    let accountType = null;
-
-    // Tìm kiếm email trong bảng User
     user = await User.findOne({ email }).populate("role");
     if (user) {
       accountType = "User";

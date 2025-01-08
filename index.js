@@ -34,6 +34,7 @@ app.use(
   managerRoutes
 );
 
+// Client
 app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 //  cơ chế JWT (JSON Web Token) để xác thực.
 // Route dịch vụ (Yêu cầu xác thực)
@@ -43,7 +44,7 @@ app.use("/service", serviceRoutes);
 // app.use("/profile", profileRoutes);
 
 // app.use("/api", uploadRoutes);
-//
+
 connectDB(app);
 // Cấu hình CORS
 

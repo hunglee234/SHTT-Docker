@@ -1,4 +1,5 @@
 const CategoryService = require("../../models/Service/CategoryService");
+const Service = require("../../models/Service/Service");
 const ManagerAccount = require("../../models/Account/InfoManager");
 const Account = require("../../models/Account/Account");
 
@@ -49,11 +50,31 @@ exports.createCategory = async (req, res) => {
 exports.getAllCategory = async (req, res) => {
   try {
     const categories = await CategoryService.find();
-
     if (!categories || categories.length === 0) {
       return res.status(404).json({ message: "No categories found" });
     }
-    res.status(200).json(categories);
+
+    // Lấy danh sách dịch vụ cho từng category
+    const categoriesWithServices = await Promise.all(
+      categories.map(async (category) => {
+        // Tìm các dịch vụ liên quan đến category
+        const services = await Service.find({ category: category._id });
+
+        return {
+          id: category._id,
+          name: category.categoryName,
+          description: category.description,
+          services: services.map((service) => ({
+            id: service._id,
+            name: service.serviceName,
+            price: service.price,
+            description: service.description,
+          })),
+        };
+      })
+    );
+
+    res.status(200).json(categoriesWithServices);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -69,7 +90,23 @@ exports.getCategoryById = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    res.status(200).json(category);
+    // Tìm các dịch vụ liên quan đến category
+    const services = await Service.find({ category: category._id });
+
+    // Lấy danh sách dịch vụ cho từng category
+    const categoryWithServices = {
+      id: category._id,
+      name: category.categoryName,
+      description: category.description,
+      services: services.map((service) => ({
+        id: service._id,
+        name: service.serviceName,
+        price: service.price,
+        description: service.description,
+      })),
+    };
+
+    res.status(200).json(categoryWithServices);
   } catch (error) {
     console.error("Error fetching category by ID:", error.message);
 

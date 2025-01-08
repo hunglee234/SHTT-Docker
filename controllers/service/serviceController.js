@@ -12,10 +12,19 @@ const Image = require("../../models/image");
 // CREATE
 exports.createService = async (req, res) => {
   try {
-    const { serviceName, description, notes, image, category } = req.body;
+    const {
+      serviceName,
+      description,
+      notes,
+      image,
+      category,
+      serviceCode,
+      price,
+    } = req.body;
 
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
+    const defaultstatus = await Role.findOne({ name: "Đang hoạt động" });
 
     if (!account) {
       return res.status(404).json({ error: "Account not found" });
@@ -37,6 +46,9 @@ exports.createService = async (req, res) => {
 
     const createdBy = account._id;
     const newService = new Service({
+      status: defaultstatus,
+      serviceCode,
+      price,
       serviceName,
       category: categoryData._id,
       description,
@@ -58,8 +70,15 @@ exports.createService = async (req, res) => {
 // READ ALL
 exports.getAllServices = async (req, res) => {
   try {
-    const services = await Service.find();
+    const { search_value } = req.query;
 
+    // Khởi tạo query để tìm kiếm
+    let serviceQuery = {};
+
+    if (search_value) {
+      serviceQuery.$text = { $search: search_value };
+    }
+    const services = await Service.find(serviceQuery);
     if (!services || services.length === 0) {
       return res.status(404).json({ message: "No services found" });
     }
@@ -94,7 +113,15 @@ exports.getServiceById = async (req, res) => {
 exports.updateService = async (req, res) => {
   try {
     const { id } = req.params;
-    const { serviceName, category, description, notes, image } = req.body;
+    const {
+      status,
+      serviceName,
+      description,
+      notes,
+      image,
+      serviceCode,
+      price,
+    } = req.body;
 
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
@@ -112,20 +139,22 @@ exports.updateService = async (req, res) => {
     }
 
     // Đầu vào của category là id
-    const categoryData = await CategoryService.findById(category);
-    if (!categoryData) {
-      return res
-        .status(404)
-        .json({ error: `Category with id '${category}' not found.` });
-    }
+    // const categoryData = await CategoryService.findById(category);
+    // if (!categoryData) {
+    //   return res
+    //     .status(404)
+    //     .json({ error: `Category with id '${category}' not found.` });
+    // }
 
     const updatedBy = account._id;
     console.log(updatedBy);
     const updatedService = await Service.findByIdAndUpdate(
       id,
       {
+        status,
+        serviceCode,
+        price,
         serviceName,
-        category: categoryData._id,
         description,
         notes,
         image: image || null,

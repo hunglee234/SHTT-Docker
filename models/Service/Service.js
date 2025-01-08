@@ -10,6 +10,13 @@ const serviceSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  serviceCode: { type: String, unique: true, default: "" },
+  price: { type: String, required: true, default: "" },
+  status: {
+    type: String,
+    enum: ["Đang hoạt động", "Không hoạt động"],
+    default: "Đang hoạt động",
+  },
   category: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "CategoryService",
@@ -53,5 +60,5 @@ const serviceSchema = new mongoose.Schema({
     default: null,
   },
 });
-
+serviceSchema.index({ serviceName: "text" });
 module.exports = mongoose.model("Service", serviceSchema);

@@ -1,0 +1,188 @@
+const express = require("express");
+const User = require("../../models/User/User");
+const bcrypt = require("bcrypt");
+const { saveAvatar } = require("../../utils/saveAvatar");
+const Account = require("../../models/Account/Account");
+const StaffAccount = require("../../models/Account/InfoStaff");
+const ManagerAccount = require("../../models/Account/InfoManager");
+const Role = require("../../models/Role");
+const moment = require("moment-timezone");
+const mongoose = require("mongoose");
+const dayjs = require("dayjs");
+const customParseFormat = require("dayjs/plugin/customParseFormat");
+dayjs.extend(customParseFormat);
+
+exports.getMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Lấy thông tin tài khoản hiện tại
+    const account = await Account.findById(userId).populate("role");
+    if (!account) {
+      return res.status(404).json({ error: "Tài khoản không tồn tại." });
+    }
+
+    console.log(typeof account._id, account._id);
+    let avatarUrl = null;
+    const staff = await StaffAccount.findOne({ account: account._id })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
+      });
+
+    // Kiểm tra nếu không tìm thấy nhân viên
+    if (!staff) {
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy nhân viên với ID được cung cấp" });
+    }
+
+    // Định dạng dữ liệu trả về
+    const responseData = {
+      avatar: avatarUrl,
+      password: staff.account.password,
+      fullName: staff.account.fullName,
+      email: staff.account.email,
+      username: staff.account.username,
+      role: staff.account.role,
+      phone: staff.phone,
+      address: staff.address,
+      staffCode: staff.staffCode,
+      dateOfBirth: staff.dateOfBirth,
+      gender: staff.gender,
+      joinDate: staff.joinDate,
+    };
+    // Trả về dữ liệu cho client
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error("Lỗi khi lấy thông tin tài khoản:", error);
+    res.status(500).json({
+      message: "Có lỗi xảy ra khi lấy thông tin tài khoản",
+      error: error.message,
+    });
+  }
+};
+
+exports.updateMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const {
+      fullName,
+      dateOfBirth,
+      gender,
+      email,
+      phone,
+      address,
+      username,
+      password,
+      joinDate,
+    } = req.body;
+
+    // Kiểm tra avatar nếu có file được tải lên
+    let avatarId = null;
+    if (req.file) {
+      const avatarUrl = req.file.location;
+      avatarId = await saveAvatar(avatarUrl);
+    }
+
+    // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date
+    const parsedDateOfBirth = dayjs(dateOfBirth, "DD/MM/YYYY").isValid()
+      ? dayjs(dateOfBirth, "DD/MM/YYYY").toDate()
+      : null;
+    const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
+      ? dayjs(joinDate, "DD/MM/YYYY").toDate()
+      : null;
+
+    // Lấy thông tin tài khoản của người dùng hiện tại
+    const account = await Account.findById(userId).populate("role");
+    if (!account) {
+      return res.status(404).json({ error: "Tài khoản không tồn tại." });
+    }
+
+    // Tìm thông tin liên quan từ StaffAccount
+    const staffAccount = await StaffAccount.findOne({ account: account._id })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
+      });
+
+    // Cập nhật các thông tin của tài khoản
+    if (fullName) account.fullName = fullName;
+    if (email) account.email = email;
+    if (username) account.username = username;
+
+    // Cập nhật avatar nếu có
+    if (avatarId) {
+      staffAccount.avatar = avatarId;
+    }
+
+    // Cập nhật các thông tin từ StaffAccount
+    if (phone) staffAccount.phone = phone;
+    if (address) staffAccount.address = address;
+    if (dateOfBirth) {
+      staffAccount.dateOfBirth = parsedDateOfBirth;
+    }
+    if (joinDate) {
+      staffAccount.joinDate = parsedJoinDate;
+    }
+    if (gender) staffAccount.gender = gender;
+
+    // Cập nhật mật khẩu nếu có
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      account.password = hashedPassword;
+    }
+
+    // Lưu thông tin cập nhật
+    await account.save();
+    await staffAccount.save();
+
+    // Lấy thông tin đã cập nhật để trả về
+    const updatedStaffAccount = await StaffAccount.findOne({ account: userId })
+      .populate({
+        path: "account",
+        select: "fullName email username role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar",
+        select: "url",
+      });
+
+    const responseData = {
+      avatar: updatedStaffAccount.avatar?.url || null,
+      password: updatedStaffAccount.account.password,
+      fullName: updatedStaffAccount.account.fullName,
+      dateOfBirth: updatedStaffAccount.dateOfBirth,
+      joinDate: updatedStaffAccount.joinDate,
+      gender: updatedStaffAccount.gender,
+      email: updatedStaffAccount.account.email,
+      phone: updatedStaffAccount.phone,
+      address: updatedStaffAccount.address,
+      username: updatedStaffAccount.account.username,
+      staffCode: updatedStaffAccount.staffCode,
+      role: updatedStaffAccount.account.role,
+    };
+
+    res.status(200).json({
+      message: "Thông tin tài khoản đã được cập nhật thành công",
+      data: responseData,
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật tài khoản:", error);
+    res.status(500).json({
+      message: "Có lỗi xảy ra khi cập nhật thông tin tài khoản",
+      error: error.message,
+    });
+  }
+};
