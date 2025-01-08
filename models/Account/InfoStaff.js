@@ -24,8 +24,8 @@ const infoStaffSchema = new mongoose.Schema({
   joinDate: { type: Date },
   status: {
     type: String,
-    enum: ["Hoạt động", "Không hoạt động"],
-    default: "Hoạt động",
+    enum: ["Đang hoạt động", "Không hoạt động"],
+    default: "Đang hoạt động",
   }, // Trạng thái
   account: {
     type: mongoose.Schema.Types.ObjectId,

@@ -15,61 +15,52 @@ dayjs.extend(customParseFormat);
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.id;
-    // console.log(userId);
+
     // Lấy thông tin tài khoản hiện tại
     const account = await Account.findById(userId).populate("role");
-
     if (!account) {
       return res.status(404).json({ error: "Tài khoản không tồn tại." });
     }
 
-    console.log("b", account._id);
-    const accountWithAvatar = await StaffAccount.findById(account._id);
-
-    console.log(accountWithAvatar);
-    try {
-      const accountWithAvatar = await StaffAccount.findById(userId);
-      if (!accountWithAvatar) {
-        console.log("Không tìm thấy tài khoản trong StaffAccount");
-      } else {
-        console.log("accountWithAvatar", accountWithAvatar);
-      }
-    } catch (error) {
-      console.error("Lỗi khi truy vấn StaffAccount:", error);
-    }
+    console.log(typeof account._id, account._id);
     let avatarUrl = null;
-    // Kiểm tra avatar trong StaffAccount
-    const accountWithAvatar = await StaffAccount.findById(account._id);
-    console.log("a", accountWithAvatar);
-
-    if (accountWithAvatar.avatar?.url) {
-      avatarUrl = accountWithAvatar.avatar.url;
-      console.log("b", avatarUrl); // Nếu có avatar, lấy URL
-    } else {
-      // Nếu không có avatar trong StaffAccount, kiểm tra trong ManagerAccount
-      const accountInManager = await ManagerAccount.findById(
-        account._id
-      ).populate({
-        path: "avatar",
-        select: "url", // Chỉ lấy trường url trong Avatar
+    const staff = await StaffAccount.findOne({ account: account._id })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
       });
 
-      avatarUrl = accountInManager?.avatar?.url || null; // Nếu có avatar trong ManagerAccount, lấy URL
+    // Kiểm tra nếu không tìm thấy nhân viên
+    if (!staff) {
+      return res
+        .status(404)
+        .json({ error: "Không tìm thấy nhân viên với ID được cung cấp" });
     }
 
     // Định dạng dữ liệu trả về
     const responseData = {
-      avatar: avatarUrl, // Lấy URL avatar đã xác định
-      fullName: account.fullName,
-      dateOfBirth: account.dateOfBirth,
-      gender: account.gender,
-      email: account.email,
-      phone: account.phone,
-      address: account.address,
-      username: account.username,
-      role: account.role,
+      avatar: avatarUrl,
+      password: staff.account.password,
+      fullName: staff.account.fullName,
+      email: staff.account.email,
+      username: staff.account.username,
+      role: staff.account.role,
+      phone: staff.phone,
+      address: staff.address,
+      staffCode: staff.staffCode,
+      dateOfBirth: staff.dateOfBirth,
+      gender: staff.gender,
+      joinDate: staff.joinDate,
     };
+    // Trả về dữ liệu cho client
+    res.status(200).json(responseData);
   } catch (error) {
+    console.error("Lỗi khi lấy thông tin tài khoản:", error);
     res.status(500).json({
       message: "Có lỗi xảy ra khi lấy thông tin tài khoản",
       error: error.message,
@@ -89,9 +80,10 @@ exports.updateMe = async (req, res) => {
       address,
       username,
       password,
+      joinDate,
     } = req.body;
 
-    // Kiểm tra avatar nếu có
+    // Kiểm tra avatar nếu có file được tải lên
     let avatarId = null;
     if (req.file) {
       const avatarUrl = req.file.location;
@@ -102,53 +94,84 @@ exports.updateMe = async (req, res) => {
     const parsedDateOfBirth = dayjs(dateOfBirth, "DD/MM/YYYY").isValid()
       ? dayjs(dateOfBirth, "DD/MM/YYYY").toDate()
       : null;
+    const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
+      ? dayjs(joinDate, "DD/MM/YYYY").toDate()
+      : null;
 
-    // Lấy thông tin tài khoản hiện tại
-    const account = await Account.findById(userId);
-
+    // Lấy thông tin tài khoản của người dùng hiện tại
+    const account = await Account.findById(userId).populate("role");
     if (!account) {
       return res.status(404).json({ error: "Tài khoản không tồn tại." });
     }
 
-    // Cập nhật thông tin tài khoản
+    // Tìm thông tin liên quan từ StaffAccount
+    const staffAccount = await StaffAccount.findOne({ account: account._id })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
+      });
+
+    // Cập nhật các thông tin của tài khoản
     if (fullName) account.fullName = fullName;
     if (email) account.email = email;
-    if (phone) account.phone = phone;
-    if (address) account.address = address;
-    if (dateOfBirth) account.dateOfBirth = parsedDateOfBirth;
-    if (gender) account.gender = gender;
+    if (username) account.username = username;
 
     // Cập nhật avatar nếu có
     if (avatarId) {
-      account.avatar = avatarId;
+      staffAccount.avatar = avatarId;
     }
 
-    // Cập nhật username và password nếu có
-    if (username) account.username = username;
+    // Cập nhật các thông tin từ StaffAccount
+    if (phone) staffAccount.phone = phone;
+    if (address) staffAccount.address = address;
+    if (dateOfBirth) {
+      staffAccount.dateOfBirth = parsedDateOfBirth;
+    }
+    if (joinDate) {
+      staffAccount.joinDate = parsedJoinDate;
+    }
+    if (gender) staffAccount.gender = gender;
+
+    // Cập nhật mật khẩu nếu có
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
-      account.password = hashedPassword; // Mã hóa mật khẩu
+      account.password = hashedPassword;
     }
 
-    // Lưu thông tin tài khoản
+    // Lưu thông tin cập nhật
     await account.save();
+    await staffAccount.save();
 
-    // Trả về thông tin tài khoản đã cập nhật
-    const updatedAccount = await Account.findById(userId).populate({
-      path: "avatar",
-      select: "url",
-    });
+    // Lấy thông tin đã cập nhật để trả về
+    const updatedStaffAccount = await StaffAccount.findOne({ account: userId })
+      .populate({
+        path: "account",
+        select: "fullName email username role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar",
+        select: "url",
+      });
 
     const responseData = {
-      avatar: updatedAccount.avatar?.url || null,
-      fullName: updatedAccount.fullName,
-      dateOfBirth: updatedAccount.dateOfBirth,
-      gender: updatedAccount.gender,
-      email: updatedAccount.email,
-      phone: updatedAccount.phone,
-      address: updatedAccount.address,
-      username: updatedAccount.username,
-      role: updatedAccount.role,
+      avatar: updatedStaffAccount.avatar?.url || null,
+      password: updatedStaffAccount.account.password,
+      fullName: updatedStaffAccount.account.fullName,
+      dateOfBirth: updatedStaffAccount.dateOfBirth,
+      joinDate: updatedStaffAccount.joinDate,
+      gender: updatedStaffAccount.gender,
+      email: updatedStaffAccount.account.email,
+      phone: updatedStaffAccount.phone,
+      address: updatedStaffAccount.address,
+      username: updatedStaffAccount.account.username,
+      staffCode: updatedStaffAccount.staffCode,
+      role: updatedStaffAccount.account.role,
     };
 
     res.status(200).json({
@@ -156,6 +179,7 @@ exports.updateMe = async (req, res) => {
       data: responseData,
     });
   } catch (error) {
+    console.error("Lỗi khi cập nhật tài khoản:", error);
     res.status(500).json({
       message: "Có lỗi xảy ra khi cập nhật thông tin tài khoản",
       error: error.message,
