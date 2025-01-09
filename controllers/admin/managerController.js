@@ -407,11 +407,18 @@ exports.updateStaff = async (req, res) => {
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       staffAccount.account.password = hashedPassword; // Mã hóa mật khẩu
+      console.log("hashedPassword", hashedPassword);
+      console.log("hashedPassword2", staffAccount.account.password);
+      staffAccount.markModified("account");
     }
+
+    console.log("pass", password);
+    console.log("pmh", staffAccount.account.password);
 
     // Lưu thông tin nhân viên và tài khoản
     await staffAccount.save();
     await staffAccount.account.save();
+    console.log(staffAccount.account);
 
     // Trả về thông tin nhân viên đã cập nhật
     const accountWithAvatar = await StaffAccount.findById(

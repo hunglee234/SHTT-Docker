@@ -37,6 +37,16 @@ const infoStaffSchema = new mongoose.Schema({
     ref: "Account",
     required: false,
   },
+  companyName: {
+    type: String,
+    default: "",
+    required: false,
+  },
+  website: {
+    type: String,
+    default: "",
+    required: false,
+  },
 });
 
 module.exports = mongoose.model("InfoStaff", infoStaffSchema);

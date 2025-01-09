@@ -23,9 +23,8 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ error: "Tài khoản không tồn tại." });
     }
 
-    let avatarUrl = null;
     const staff = await StaffAccount.findOne({ account: account._id }).populate(
-      "account"
+      [{ path: "account" }, { path: "avatar", select: "url" }]
     );
 
     // Kiểm tra nếu không tìm thấy nhân viên
@@ -37,7 +36,7 @@ exports.getMe = async (req, res) => {
 
     // Định dạng dữ liệu trả về
     const responseData = {
-      avatar: avatarUrl,
+      avatar: staff.avatar.url || null,
       password: staff.account.password,
       fullName: staff.account.fullName,
       email: staff.account.email,

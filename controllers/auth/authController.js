@@ -9,7 +9,7 @@ const SECRET_KEY = "hungdzvclra";
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-
+  // console.log(req.body);
   try {
     user = await User.findOne({ email }).populate("role");
     if (user) {
@@ -18,16 +18,20 @@ exports.login = async (req, res) => {
       user = await Account.findOne({ email }).populate("role");
       if (user) {
         accountType = "Account";
+        const staffAccount = await StaffAccount.findOne({
+          account: user._id,
+        });
+        user.staffAccount = staffAccount;
       }
     }
-
-    // console.log("b", user._id);
+    // console.log("a", user);
     if (!user) {
       return res.status(404).json({ message: "Email not found" });
     }
 
     // Kiểm tra mật khẩu
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -59,7 +63,7 @@ exports.login = async (req, res) => {
       user: {
         avatar: avatarUrl,
         username: user.username,
-        id: user._id,
+        id: user.staffAccount._id,
         email: user.email,
         role: user.role.name || user.role,
       },
