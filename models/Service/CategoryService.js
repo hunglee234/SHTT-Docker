@@ -48,5 +48,5 @@ const categoryServiceSchema = new mongoose.Schema({
     default: null,
   },
 });
-
+categoryServiceSchema.index({ categoryName: "text" });
 module.exports = mongoose.model("CategoryService", categoryServiceSchema);

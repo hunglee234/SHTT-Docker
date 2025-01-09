@@ -8,7 +8,7 @@ const upload = require("../../utils/multer");
 router.post(
   "/register/:serviceId",
   authenticateToken,
-  upload.fields([{ name: "gallery", maxCount: 5 }]),
+  upload.fields([{ name: "gallery", maxCount: 3 }]),
   serviceController.registerService
 );
 
