@@ -70,7 +70,7 @@ exports.createService = async (req, res) => {
 // READ ALL
 exports.getAllServices = async (req, res) => {
   try {
-    const { search_value } = req.query;
+    const { search_value, page = 1, limit = 10 } = req.query;
 
     // Khởi tạo query để tìm kiếm
     let serviceQuery = {};
@@ -78,12 +78,26 @@ exports.getAllServices = async (req, res) => {
     if (search_value) {
       serviceQuery.$text = { $search: search_value };
     }
-    const services = await Service.find(serviceQuery);
+    const skip = (page - 1) * limit;
+    const services = await Service.find(serviceQuery)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .exec();
+
+    const totalServices = await Service.countDocuments(serviceQuery);
+
     if (!services || services.length === 0) {
       return res.status(404).json({ message: "No services found" });
     }
 
-    res.status(200).json(services);
+    const totalPages = Math.ceil(totalServices / limit);
+
+    res.status(200).json({
+      currentPage: page,
+      totalPages: totalPages,
+      totalServices: totalServices,
+      services: services,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -225,6 +239,7 @@ exports.registerService = async (req, res) => {
   const { serviceId } = req.params;
   const { info, image } = req.body;
   const createdUserId = req.user.id;
+
   if (!mongoose.Types.ObjectId.isValid(serviceId)) {
     return res.status(400).json({ message: "ID dịch vụ không hợp lệ!" });
   }
@@ -235,6 +250,40 @@ exports.registerService = async (req, res) => {
     if (!service) {
       return res.status(404).json({ message: "Dịch vụ không tồn tại!" });
     }
+
+    // Lấy các trường 'info' từ body (thông tin như người nộp đơn, dịch vụ, etc.)
+    const infoData = JSON.parse(req.body.info || "[]");
+    // console.log(req.body.info);
+    // Lấy danh sách file từ gallery
+    const galleryFiles = req.files.gallery || [];
+    // console.log(req.files.gallery);
+
+    // Tạo responseObject cho phần text (info) và file (gallery)
+    const responseObject = {
+      info: infoData.map((infoItem) => ({
+        type: infoItem.type,
+        fields: infoItem.fields.map((field, index) => {
+          if (field.fieldType === "text") {
+            // Gán giá trị text vào các trường
+            return {
+              name: field.name,
+              value: field.value,
+              fieldType: field.fieldType,
+            };
+          } else if (field.fieldType === "image" || field.fieldType === "pdf") {
+            // Xử lý file (ảnh hoặc pdf)
+            const file = galleryFiles[index];
+            return {
+              name: field.name,
+              value: file.location,
+              fieldType: file.mimetype.startsWith("image") ? "image" : "pdf",
+            };
+          }
+        }),
+      })),
+    };
+
+    console.log(JSON.stringify(responseObject.info, null, 2));
 
     const managerUserId = service.createdBy?._id;
     if (!managerUserId) {
@@ -256,7 +305,7 @@ exports.registerService = async (req, res) => {
     const newProfile = new Profile({
       registeredService: savedService._id,
       serviceId,
-      info,
+      info: responseObject.info,
       createdBy: createdUserId,
       image: image || null,
       createdAt: new Date(),
