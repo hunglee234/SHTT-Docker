@@ -2,11 +2,13 @@ const express = require("express");
 const serviceController = require("../../controllers/service/serviceController");
 const { authenticateToken } = require("../../middleware/auth");
 const router = express.Router();
+const upload = require("../../utils/multer");
 
 // Đăng ký dịch vụ (cần đăng nhập)
 router.post(
   "/register/:serviceId",
   authenticateToken,
+  upload.fields([{ name: "gallery", maxCount: 5 }]),
   serviceController.registerService
 );
 
