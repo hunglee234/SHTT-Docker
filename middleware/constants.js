@@ -1,7 +1,7 @@
 const ROLES = {
   ADMIN: "Admin",
   MANAGER: "Manager",
-  EMPLOYEE: "Employee",
+  STAFF: "Staff",
   COLLABORATOR: "Collaborator",
   USER: "User",
 };
@@ -9,7 +9,7 @@ const ROLES = {
 const ADMIN_AND_TEAM = [
   ROLES.ADMIN,
   ROLES.MANAGER,
-  ROLES.EMPLOYEE,
+  ROLES.STAFF,
   ROLES.COLLABORATOR,
 ];
 const ALL_ROLES = [...ADMIN_AND_TEAM, ROLES.USER];

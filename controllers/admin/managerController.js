@@ -25,7 +25,7 @@ exports.createStaff = async (req, res) => {
       username,
       password,
       joinDate,
-      role: roleId,
+      role: roleName,
     } = req.body;
 
     // console.log(req.body);
@@ -59,7 +59,7 @@ exports.createStaff = async (req, res) => {
         .json({ error: "Bạn không có quyền tạo nhân viên." });
     }
     // Check roleId
-    const roleExists = await Role.findById(roleId);
+    const roleExists = await Role.findOne({ name: roleName });
     if (!roleExists) {
       return res.status(404).json({ error: "Role không tồn tại." });
     }
@@ -128,6 +128,7 @@ exports.createStaff = async (req, res) => {
 
     // Dữ liệu trả về cho client
     const responseData = {
+      id: savedInfoStaff._id,
       avatar: avatarUrl,
       fullName: savedAccount.fullName,
       dateOfBirth: savedInfoStaff.dateOfBirth,
@@ -139,6 +140,7 @@ exports.createStaff = async (req, res) => {
       staffCode: savedInfoStaff.staffCode,
       username: savedAccount.username,
       role: savedAccount.role,
+      status: savedInfoStaff.status,
     };
 
     res.status(201).json({
@@ -280,6 +282,7 @@ exports.getStaffById = async (req, res) => {
 
     // Dữ liệu trả về cho client
     const responseData = {
+      id: staff._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
       email: staff.account.email,
@@ -291,6 +294,7 @@ exports.getStaffById = async (req, res) => {
       dateOfBirth: staff.dateOfBirth,
       gender: staff.gender,
       joinDate: staff.joinDate,
+      status: staff.status,
     };
 
     // Trả về thông tin chi tiết của nhân viên
@@ -328,7 +332,7 @@ exports.updateStaff = async (req, res) => {
       username,
       password,
       joinDate,
-      role: roleId,
+      role: roleName,
     } = req.body;
 
     // Kiểm tra avatar nếu có
@@ -368,9 +372,9 @@ exports.updateStaff = async (req, res) => {
       return res.status(404).json({ error: "Nhân viên không tồn tại." });
     }
 
-    // Kiểm tra nếu roleId được truyền vào và nếu là Manager
-    if (roleId) {
-      const roleExists = await Role.findById(roleId);
+    // Kiểm tra role truyền vào và so sánh với Database
+    if (roleName) {
+      const roleExists = await Role.findOne({ name: roleName });
       if (!roleExists) {
         return res.status(404).json({ error: "Role không tồn tại." });
       }
@@ -420,6 +424,7 @@ exports.updateStaff = async (req, res) => {
     const avatarUrl = accountWithAvatar.avatar?.url || null;
 
     const responseData = {
+      id: staffAccount._id,
       avatar: avatarUrl,
       fullName: staffAccount.account.fullName,
       dateOfBirth: staffAccount.dateOfBirth,

@@ -9,7 +9,7 @@ const registeredServiceSchema = new mongoose.Schema({
   },
   createdUserId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: "Account",
     required: true,
   },
   managerUserId: {
@@ -21,6 +21,7 @@ const registeredServiceSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  profileId: { type: mongoose.Schema.Types.ObjectId, ref: "Profile" },
 });
 
 module.exports = mongoose.model("registeredService", registeredServiceSchema);

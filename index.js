@@ -13,7 +13,7 @@ const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const adminRoutes = require("./routes/admin/adminRoutes");
 const authRoutes = require("./routes/authRoutes");
 const managerRoutes = require("./routes/client/managerRoutes");
-const serviceRoutes = require("./routes/sevice/serviceRouter");
+// const serviceRoutes = require("./routes/sevice/serviceRouter");
 const userRoutes = require("./routes/user/routesUser");
 // const profileRoutes = require("./routes/profile/profileRouter");
 // const uploadRoutes = require("./routes/upload");
@@ -38,7 +38,7 @@ app.use(
 app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 //  cơ chế JWT (JSON Web Token) để xác thực.
 // Route dịch vụ (Yêu cầu xác thực)
-app.use("/service", serviceRoutes);
+// app.use("/service", serviceRoutes);
 
 // Route hồ sơ (Yêu cầu xác thực)
 // app.use("/profile", profileRoutes);
