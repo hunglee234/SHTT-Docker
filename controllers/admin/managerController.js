@@ -23,9 +23,6 @@ exports.createStaff = async (req, res) => {
       role: roleName,
     } = req.body;
 
-    // console.log(req.body);
-    // console.log(req.file);
-
     let avatarId = null;
     if (req.file) {
       const avatarUrl = req.file.location;
@@ -58,31 +55,45 @@ exports.createStaff = async (req, res) => {
     if (!roleExists) {
       return res.status(404).json({ error: "Role không tồn tại." });
     }
-    console.log("Role của nhân viên:", roleExists.name);
+
+    console.log("Role của Staff", roleExists.name);
 
     // Kiểm tra số lượng nhân viên và cộng tác viên tạo bởi Manager này :
-    // const staffCount = await StaffAccount.countDocuments({
-    //   createdByManager: account._id,
-    //   position: "Nhân viên",
-    // });
-    // console.log(staffCount);
-    // const collaboratorCount = await StaffAccount.countDocuments({
-    //   createdByManager: account._id,
-    //   position: "Cộng tác viên",
-    // });
-    // console.log(collaboratorCount);
-    // // Điều kiện hạn chế số lượng
-    // if (roleExists.name === "Staff" && staffCount >= 2) {
-    //   return res
-    //     .status(400)
-    //     .json({ error: "Bạn chỉ được tạo tối đa 2 Nhân viên." });
-    // }
+    const staffAccounts = await StaffAccount.find({
+      createdByManager: account._id,
+    }).populate({
+      path: "account",
+      populate: {
+        path: "role",
+        select: "name",
+      },
+    });
 
-    // if (roleExists.name === "Collaborator" && collaboratorCount >= 1) {
-    //   return res
-    //     .status(400)
-    //     .json({ error: "Bạn chỉ được tạo tối đa 1 Cộng Tác Viên." });
-    // }
+    let collaboratorCount = 0;
+    let staffCount = 0;
+
+    staffAccounts.forEach((staffAccount) => {
+      const roleName = staffAccount.account?.role?.name; // Truy cập role.name
+      if (roleName === "Collaborator") {
+        collaboratorCount++;
+      }
+      if (roleName === "Staff") {
+        staffCount++;
+      }
+    });
+    console.log("số nhân viên", staffCount);
+    console.log("số cộng tác viên", collaboratorCount);
+    if (roleExists.name === "Staff" && staffCount >= 2) {
+      return res
+        .status(400)
+        .json({ error: "Bạn chỉ được tạo tối đa 2 Nhân viên." });
+    }
+
+    if (roleExists.name === "Collaborator" && collaboratorCount >= 1) {
+      return res
+        .status(400)
+        .json({ error: "Bạn chỉ được tạo tối đa 1 Cộng tác viên." });
+    }
 
     // Mã hóa mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -177,11 +188,16 @@ exports.getFullStaffList = async (req, res) => {
       // Manager chỉ được xem danh sách do họ tạo ra
       staffAccounts = await StaffAccount.find({
         createdByManager: currentUser._id,
-      }).populate({
-        path: "account",
-        select: "fullName email username avatar role",
-        populate: { path: "role", select: "name" },
-      });
+      })
+        .populate({
+          path: "account",
+          select: "fullName email username avatar role",
+          populate: { path: "role", select: "name" },
+        })
+        .populate({
+          path: "createdByManager",
+          select: "fullName",
+        });
     } else {
       return res.status(403).json({
         message: "Bạn không có quyền truy cập vào danh sách này.",
@@ -327,6 +343,7 @@ exports.updateStaff = async (req, res) => {
       username,
       password,
       joinDate,
+      status,
       role: roleName,
     } = req.body;
 
@@ -382,7 +399,7 @@ exports.updateStaff = async (req, res) => {
     if (phone) staffAccount.phone = phone;
     if (address) staffAccount.address = address;
     if (staffCode) staffAccount.staffCode = staffCode;
-
+    if (status) staffAccount.status = status;
     if (dateOfBirth) {
       staffAccount.dateOfBirth = parsedDateOfBirth;
     }
@@ -402,13 +419,7 @@ exports.updateStaff = async (req, res) => {
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       staffAccount.account.password = hashedPassword; // Mã hóa mật khẩu
-      console.log("hashedPassword", hashedPassword);
-      console.log("hashedPassword2", staffAccount.account.password);
-      staffAccount.markModified("account");
     }
-
-    console.log("pass", password);
-    console.log("pmh", staffAccount.account.password);
 
     // Lưu thông tin nhân viên và tài khoản
     await staffAccount.save();
@@ -437,6 +448,7 @@ exports.updateStaff = async (req, res) => {
       joinDate: staffAccount.joinDate,
       staffCode: staffAccount.staffCode,
       username: staffAccount.account.username,
+      status: staffAccount.status,
       role: staffAccount.account.role,
     };
 
