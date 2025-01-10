@@ -7,20 +7,22 @@ const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
 // Tạo tài khoản nhân viên
-exports.createStaff = async (req, res) => {
+exports.createCustomer = async (req, res) => {
   try {
     const {
+      companyName,
       fullName,
-      dateOfBirth,
-      gender,
       email,
       phone,
+      website,
+      zalo,
+      MST,
       address,
       staffCode,
       username,
       password,
-      joinDate,
       role: roleName,
+      status,
     } = req.body;
 
     let avatarId = null;
@@ -28,15 +30,6 @@ exports.createStaff = async (req, res) => {
       const avatarUrl = req.file.location;
       avatarId = await saveAvatar(avatarUrl);
     }
-
-    // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date
-    const parsedDateOfBirth = dayjs(dateOfBirth, "DD/MM/YYYY").isValid()
-      ? dayjs(dateOfBirth, "DD/MM/YYYY").toDate()
-      : null;
-    const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
-      ? dayjs(joinDate, "DD/MM/YYYY").toDate()
-      : null;
-
     const userId = req.user.id;
 
     const account = await Account.findById(userId).populate("role");
@@ -45,10 +38,10 @@ exports.createStaff = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Manager") {
+    if (!account.role || account.role.name !== "Admin") {
       return res
         .status(403)
-        .json({ error: "Bạn không có quyền tạo nhân viên." });
+        .json({ error: "Bạn không có quyền tạo khách hàng." });
     }
     // Check roleId
     const roleExists = await Role.findOne({ name: roleName });
@@ -82,31 +75,6 @@ exports.createStaff = async (req, res) => {
       },
     });
 
-    let collaboratorCount = 0;
-    let staffCount = 0;
-
-    staffAccounts.forEach((staffAccount) => {
-      const roleName = staffAccount.account?.role?.name; // Truy cập role.name
-      if (roleName === "Collaborator") {
-        collaboratorCount++;
-      }
-      if (roleName === "Staff") {
-        staffCount++;
-      }
-    });
-
-    if (roleExists.name === "Staff" && staffCount >= 2) {
-      return res
-        .status(400)
-        .json({ error: "Bạn chỉ được tạo tối đa 2 Nhân viên." });
-    }
-
-    if (roleExists.name === "Collaborator" && collaboratorCount >= 1) {
-      return res
-        .status(400)
-        .json({ error: "Bạn chỉ được tạo tối đa 1 Cộng tác viên." });
-    }
-
     // Mã hóa mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -120,61 +88,65 @@ exports.createStaff = async (req, res) => {
     });
 
     const savedAccount = await newAccount.save(); // Lưu tài khoản vào DB
-    // Tạo thông tin nhân viên trong collection InfoStaff
+    // Tạo tài khoản mới trong collection InfoStaff
     const newInfoStaff = new StaffAccount({
       avatar: avatarId,
       account: savedAccount._id,
-      dateOfBirth: parsedDateOfBirth,
-      gender,
+      companyName,
+      website,
+      zalo,
+      MST,
       phone,
       address,
       createdByManager: account._id,
       staffCode,
-      joinDate: parsedJoinDate,
+      status,
     });
     const savedInfoStaff = await newInfoStaff.save(); // Lưu thông tin nhân viên vào DB
 
     const accountWithAvatar = await StaffAccount.findById(
       savedInfoStaff._id
     ).populate({
-      path: "avatar", // Tham chiếu tới collection Avatar
-      select: "url", // Chỉ lấy trường url trong Avatar
+      path: "avatar",
+      select: "url",
     });
 
     console.log(accountWithAvatar);
     const avatarUrl = accountWithAvatar.avatar?.url || null;
 
-    // Dữ liệu trả về cho client
+    // Dữ liệu trả về
     const responseData = {
       id: savedInfoStaff._id,
       avatar: avatarUrl,
       fullName: savedAccount.fullName,
-      dateOfBirth: savedInfoStaff.dateOfBirth,
-      gender: savedInfoStaff.gender,
+      companyName: savedInfoStaff.companyName,
+      website: savedInfoStaff.website,
+      zalo: savedInfoStaff.zalo,
+      MST: savedInfoStaff.MST,
       email: savedAccount.email,
       phone: savedInfoStaff.phone,
       address: savedInfoStaff.address,
-      joinDate: savedInfoStaff.joinDate,
       staffCode: savedInfoStaff.staffCode,
       username: savedAccount.username,
       role: savedAccount.role,
       status: savedInfoStaff.status,
+      createdByManager: savedInfoStaff.createdByManager,
     };
 
     res.status(201).json({
-      message: "Nhân viên đã được tạo thành công",
+      message: "Khách hàng đã được tạo thành công",
       data: responseData,
     });
   } catch (error) {
     res.status(500).json({
-      message: "Có lỗi xảy ra khi tạo nhân viên",
+      message: "Có lỗi xảy ra khi tạo khách hàng",
       error: error.message,
     });
   }
 };
 
-// Lấy danh sách nhân viên
-exports.getFullStaffList = async (req, res) => {
+// Lấy danh sách khách hàng
+exports.getFullCustomerList = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -190,25 +162,15 @@ exports.getFullStaffList = async (req, res) => {
 
     let staffAccounts;
     if (userRole === "Admin") {
-      // Admin có quyền xem toàn bộ danh sách
-      staffAccounts = await StaffAccount.find().populate({
-        path: "account",
-        select: "fullName email username avatar role",
-        populate: { path: "role", select: "name" },
-      });
-    } else if (userRole === "Manager") {
-      // Manager chỉ được xem danh sách do họ tạo ra
-      staffAccounts = await StaffAccount.find({
-        createdByManager: currentUser._id,
-      })
+      staffAccounts = await StaffAccount.find()
         .populate({
           path: "account",
-          select: "fullName email username avatar role",
-          populate: { path: "role", select: "name" },
+          select: "fullName email username role",
+          populate: { path: "role", select: "name" }, // Populate role từ Account
         })
         .populate({
-          path: "createdByManager",
-          select: "fullName",
+          path: "avatar",
+          select: "url", // Populate avatar từ StaffAccount
         });
     } else {
       return res.status(403).json({
@@ -220,24 +182,18 @@ exports.getFullStaffList = async (req, res) => {
     if (!staffAccounts || staffAccounts.length === 0) {
       return res
         .status(404)
-        .json({ message: "Không có nhân viên nào được tìm thấy." });
+        .json({ message: "Không có khách hàng nào được tìm thấy." });
     }
 
-    // Phân loại nhân viên và cộng tác viên
-    const employees = staffAccounts.filter(
-      (staff) => staff.account?.role?.name === "Staff"
-    );
-    const collaborators = staffAccounts.filter(
-      (staff) => staff.account?.role?.name === "Collaborator"
+    // Lọc các tài khoản không phải Admin
+    const filteredStaffAccounts = staffAccounts.filter(
+      (staff) => staff.account?.role?.name !== "Admin"
     );
 
     res.status(200).json({
-      message: "Danh sách nhân viên đầy đủ thông tin.",
-      total: staffAccounts.length,
-      data: {
-        employees,
-        collaborators,
-      },
+      message: "Danh sách khách hàng",
+      total: filteredStaffAccounts.length,
+      data: filteredStaffAccounts,
     });
   } catch (error) {
     if (error.name === "CastError") {
@@ -255,7 +211,7 @@ exports.getFullStaffList = async (req, res) => {
 };
 
 // // Lấy thông tin chi tiết nhân viên
-exports.getStaffById = async (req, res) => {
+exports.getStaffCustomerId = async (req, res) => {
   try {
     const { id } = req.params;
     const { id: userId } = req.user;
@@ -290,10 +246,7 @@ exports.getStaffById = async (req, res) => {
     }
 
     // Kiểm tra quyền truy cập của Manager
-    if (
-      userRole === "Manager" &&
-      staff.createdByManager.toString() !== userId
-    ) {
+    if (userRole === "Admin" && staff.createdByManager.toString() !== userId) {
       return res.status(403).json({
         message: "Bạn không có quyền truy cập vào thông tin của nhân viên này.",
       });
@@ -307,21 +260,22 @@ exports.getStaffById = async (req, res) => {
       id: staff._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
+      companyName: staff.account.companyName,
+      zalo: staff.account.zalo,
+      MST: staff.account.MST,
       email: staff.account.email,
       username: staff.account.username,
       role: staff.account.role,
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
-      dateOfBirth: staff.dateOfBirth,
-      gender: staff.gender,
-      joinDate: staff.joinDate,
       status: staff.status,
+      createdByManager: staff.account.createdByManager,
     };
 
     // Trả về thông tin chi tiết của nhân viên
     res.status(200).json({
-      message: "Thông tin chi tiết nhân viên",
+      message: "Thông tin chi tiết khách hàng",
       data: responseData,
     });
   } catch (error) {
@@ -340,22 +294,23 @@ exports.getStaffById = async (req, res) => {
 // // Cập nhật thông tin nhân viên
 // Hàm cập nhật thông tin nhân viê
 
-exports.updateStaff = async (req, res) => {
+exports.updateCustomer = async (req, res) => {
   try {
     const { id } = req.params; // Lấy id nhân viên từ params
     const {
+      companyName,
       fullName,
-      dateOfBirth,
-      gender,
       email,
       phone,
+      website,
+      zalo,
+      MST,
       address,
       staffCode,
       username,
       password,
-      joinDate,
-      status,
       role: roleName,
+      status,
     } = req.body;
 
     // Kiểm tra avatar nếu có
@@ -364,14 +319,6 @@ exports.updateStaff = async (req, res) => {
       const avatarUrl = req.file.location;
       avatarId = await saveAvatar(avatarUrl);
     }
-
-    // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date
-    const parsedDateOfBirth = dayjs(dateOfBirth, "DD/MM/YYYY").isValid()
-      ? dayjs(dateOfBirth, "DD/MM/YYYY").toDate()
-      : null;
-    const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
-      ? dayjs(joinDate, "DD/MM/YYYY").toDate()
-      : null;
 
     const userId = req.user.id;
 
@@ -382,17 +329,17 @@ exports.updateStaff = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Manager") {
+    if (!account.role || account.role.name !== "Admin") {
       return res
         .status(403)
         .json({ error: "Bạn không có quyền cập nhật nhân viên." });
     }
 
-    // Tìm thông tin nhân viên cần cập nhật
+    // Tìm thông tin khách hàng cần cập nhật
     const staffAccount = await StaffAccount.findById(id).populate("account");
 
     if (!staffAccount) {
-      return res.status(404).json({ error: "Nhân viên không tồn tại." });
+      return res.status(404).json({ error: "khách hàng không tồn tại." });
     }
 
     // Kiểm tra role truyền vào và so sánh với Database
@@ -426,14 +373,11 @@ exports.updateStaff = async (req, res) => {
     if (address) staffAccount.address = address;
     if (staffCode) staffAccount.staffCode = staffCode;
     if (status) staffAccount.status = status;
-    if (dateOfBirth) {
-      staffAccount.dateOfBirth = parsedDateOfBirth;
-    }
-    if (joinDate) {
-      staffAccount.joinDate = parsedJoinDate;
-    }
 
-    if (gender) staffAccount.gender = gender;
+    if (companyName) staffAccount.account.companyName = companyName;
+    if (website) staffAccount.account.website = website;
+    if (zalo) staffAccount.account.zalo = zalo;
+    if (MST) staffAccount.account.zalo = MST;
 
     // Cập nhật avatar nếu có
     if (avatarId) {
@@ -465,12 +409,13 @@ exports.updateStaff = async (req, res) => {
       id: staffAccount._id,
       avatar: avatarUrl,
       fullName: staffAccount.account.fullName,
-      dateOfBirth: staffAccount.dateOfBirth,
-      gender: staffAccount.gender,
+      companyName: staffAccount.account.companyName,
+      website: staffAccount.account.website,
+      zalo: staffAccount.account.zalo,
+      MST: staffAccount.account.MST,
       email: staffAccount.account.email,
       phone: staffAccount.phone,
       address: staffAccount.address,
-      joinDate: staffAccount.joinDate,
       staffCode: staffAccount.staffCode,
       username: staffAccount.account.username,
       status: staffAccount.status,
@@ -478,7 +423,7 @@ exports.updateStaff = async (req, res) => {
     };
 
     res.status(200).json({
-      message: "Thông tin nhân viên đã được cập nhật thành công",
+      message: "Thông tin khách hàng đã được cập nhật thành công",
       data: responseData,
     });
   } catch (error) {
@@ -490,7 +435,7 @@ exports.updateStaff = async (req, res) => {
 };
 
 // Hàm xóa nhân viên
-exports.deleteStaff = async (req, res) => {
+exports.deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params; // ID của StaffAccount cần xóa
     const userId = req.user.id;
@@ -506,24 +451,14 @@ exports.deleteStaff = async (req, res) => {
     // Lấy thông tin StaffAccount
     const staffAccount = await StaffAccount.findById(id).populate("account");
     if (!staffAccount) {
-      return res.status(404).json({ message: "Nhân viên không tồn tại." });
-    }
-
-    // Kiểm tra quyền xóa
-    if (
-      userRole === "Manager" &&
-      staffAccount.createdByManager.toString() !== userId
-    ) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền xóa nhân viên này." });
+      return res.status(404).json({ message: "Khách hàng không tồn tại." });
     }
 
     // Xóa cả Account và StaffAccount
     await Account.findByIdAndDelete(staffAccount.account._id);
     await StaffAccount.findByIdAndDelete(id);
 
-    res.status(200).json({ message: "Xóa nhân viên thành công." });
+    res.status(200).json({ message: "Xóa khach hàng thành công." });
   } catch (error) {
     console.error("Error in deleteStaff:", error);
     res.status(500).json({

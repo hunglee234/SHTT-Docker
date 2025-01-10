@@ -12,7 +12,7 @@ const infoStaffSchema = new mongoose.Schema(
       default: null,
     },
     staffCode: { type: String, unique: true, default: "" },
-    dateOfBirth: { type: Date },
+    dateOfBirth: { type: Date, default: Date.now },
     gender: { type: String, enum: ["Nam", "Nữ", "Khác"], default: "Khác" },
     phone: { type: String, default: "" },
     // Địa chỉ
@@ -44,6 +44,16 @@ const infoStaffSchema = new mongoose.Schema(
       required: false,
     },
     website: {
+      type: String,
+      default: "",
+      required: false,
+    },
+    zalo: {
+      type: String,
+      default: "",
+      required: false,
+    },
+    MST: {
       type: String,
       default: "",
       required: false,
