@@ -2,9 +2,14 @@ const Procedure = require("../../models/Procedure");
 
 // Thêm thủ tục
 exports.createProcedure = async (req, res) => {
-  const { name, pdfUrl } = req.body;
   try {
-    const procedure = await Procedure.create({ name, pdfUrl });
+    const nameProce = req.body.name || [];
+    const pdfFile = req.file || {};
+    const pdfId = pdfFile.location;
+    const procedure = await Procedure.create({
+      name: nameProce,
+      pdfUrl: pdfId,
+    });
     res
       .status(201)
       .json({ message: "Thủ tục được tạo thành công!", data: procedure });
@@ -18,16 +23,26 @@ exports.createProcedure = async (req, res) => {
 // Sửa thủ tục
 exports.updateProcedure = async (req, res) => {
   const { procedureId } = req.params;
-  const { name, pdfUrl } = req.body;
+  const nameProce = req.body.name;
+  const pdfFile = req.file || {};
+  const pdfId = pdfFile.location || null;
   try {
-    const procedure = await Procedure.findByIdAndUpdate(
-      procedureId,
-      { name, pdfUrl },
-      { new: true }
-    );
-    if (!procedure) {
+    const currentProcedure = await Procedure.findById(procedureId);
+    if (!currentProcedure) {
       return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
     }
+
+    const updatedData = {
+      name: nameProce || currentProcedure.name,
+      pdfUrl: pdfId || currentProcedure.pdfUrl,
+    };
+
+    const procedure = await Procedure.findByIdAndUpdate(
+      procedureId,
+      updatedData,
+      { new: true }
+    );
+
     res
       .status(200)
       .json({ message: "Thủ tục được cập nhật thành công!", data: procedure });
@@ -57,7 +72,20 @@ exports.deleteProcedure = async (req, res) => {
 // Xem danh sách thủ tục
 exports.getAllProcedures = async (req, res) => {
   try {
-    const procedures = await Procedure.find();
+    const { search_value } = req.query;
+    let procedureQuery = {};
+
+    if (
+      search_value &&
+      search_value.trim() !== "" &&
+      search_value.trim() !== '""'
+    ) {
+      const cleanSearchValue = search_value.replace(/"/g, "").trim(); // Loại bỏ dấu ngoặc kép và khoảng trắng
+      procedureQuery.name = { $regex: cleanSearchValue, $options: "i" }; // Tìm kiếm không phân biệt hoa thường
+    }
+
+    const procedures = await Procedure.find(procedureQuery);
+
     res.status(200).json({ message: "Danh sách thủ tục:", data: procedures });
   } catch (error) {
     res.status(500).json({

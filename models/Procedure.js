@@ -13,5 +13,5 @@ const ProcedureSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+ProcedureSchema.index({ name: "text" });
 module.exports = mongoose.model("Procedure", ProcedureSchema);
