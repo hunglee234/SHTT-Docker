@@ -41,11 +41,6 @@ const profileSchema = new mongoose.Schema({
       ref: "Process",
     },
   ],
-  image: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Image",
-    default: null,
-  },
   record: {
     type: [mongoose.Schema.Types.ObjectId],
     ref: "Record",

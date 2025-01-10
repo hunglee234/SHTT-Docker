@@ -49,10 +49,25 @@ exports.createCategory = async (req, res) => {
 // READ ALL
 exports.getAllCategory = async (req, res) => {
   try {
-    const categories = await CategoryService.find();
+    const { search_value, page = 1, limit = 10 } = req.query;
+
+    let categoryQuery = {};
+    if (search_value) {
+      categoryQuery.$text = { $search: search_value };
+    }
+    const skip = (page - 1) * limit;
+    const categories = await CategoryService.find(categoryQuery)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .exec();
+
+    const totalCategories = await CategoryService.countDocuments(categoryQuery);
+
     if (!categories || categories.length === 0) {
       return res.status(404).json({ message: "No categories found" });
     }
+
+    const totalPages = Math.ceil(totalCategories / limit);
 
     // Lấy danh sách dịch vụ cho từng category
     const categoriesWithServices = await Promise.all(
@@ -74,7 +89,12 @@ exports.getAllCategory = async (req, res) => {
       })
     );
 
-    res.status(200).json(categoriesWithServices);
+    res.status(200).json({
+      currentPage: page,
+      totalPages: totalPages,
+      totalCategories: totalCategories,
+      categories: categoriesWithServices,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -1,13 +1,8 @@
-const express = require("express");
-const User = require("../../models/User/User");
 const bcrypt = require("bcrypt");
 const { saveAvatar } = require("../../utils/saveAvatar");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
-const ManagerAccount = require("../../models/Account/InfoManager");
 const Role = require("../../models/Role");
-const moment = require("moment-timezone");
-const mongoose = require("mongoose");
 const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
