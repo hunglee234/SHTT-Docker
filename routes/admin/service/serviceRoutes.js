@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const upload = require("../../../utils/multer");
 
 const {
   createService,
@@ -9,13 +10,15 @@ const {
   deleteService,
 } = require("../../../controllers/service/serviceController");
 
-router.post("/", createService);
+//update ảnh
+router.post("/", upload.single("image"), createService);
 
 router.get("/", getAllServices);
 
 router.get("/:id", getServiceById);
 
-router.put("/:id", updateService);
+//update ảnh
+router.put("/:id", upload.single("image"), updateService);
 
 router.delete("/:id", deleteService);
 

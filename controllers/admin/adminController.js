@@ -55,7 +55,7 @@ exports.createAccount = async (req, res) => {
     if (!roleExists) {
       return res.status(404).json({ error: "Role không tồn tại." });
     }
-    console.log("Role của nhân viên:", roleExists.name);
+    // console.log("Role của nhân viên:", roleExists.name);
 
     // Mã hóa mật khẩu
     const hashedPassword = await bcrypt.hash(password, 10);
