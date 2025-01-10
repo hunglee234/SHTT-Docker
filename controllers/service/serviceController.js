@@ -7,8 +7,8 @@ const InfoUser = require("../../models/User/InfoUser");
 const Record = require("../../models/Service/Record");
 const mongoose = require("mongoose");
 const Profile = require("../../models/Service/Profile");
-const Image = require("../../models/image");
-const Process = require("../../models/Process");
+const { saveFile } = require("../../utils/saveFile");
+
 // CREATE
 exports.createService = async (req, res) => {
   try {
@@ -16,15 +16,23 @@ exports.createService = async (req, res) => {
       serviceName,
       description,
       notes,
-      image,
-      category,
+      category: categoryname,
       serviceCode,
       price,
+      status,
     } = req.body;
+
+    let imageId = null;
+    if (req.file) {
+      const imageUrl = req.file.location;
+      const fileType = req.file.mimetype.includes("image") ? "image" : "pdf";
+
+      imageId = await saveFile(imageUrl, fileType);
+    }
 
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
-    const defaultstatus = await Role.findOne({ name: "Đang hoạt động" });
+    // const defaultstatus = await Role.findOne({ name: "Đang hoạt động" });
 
     if (!account) {
       return res.status(404).json({ error: "Account not found" });
@@ -36,31 +44,37 @@ exports.createService = async (req, res) => {
         .json({ error: "Permission denied. User is not an Admin." });
     }
 
-    // Đầu vào của category là id
-    const categoryData = await CategoryService.findById(category);
-    if (!categoryData) {
-      return res
-        .status(404)
-        .json({ error: `Category with id '${category}' not found.` });
+    // check Category Name
+    const categoryExists = await CategoryService.findOne({
+      categoryName: categoryname,
+    });
+
+    if (!categoryExists) {
+      return res.status(404).json({ error: "Loại dịch vụ không tồn tại." });
     }
 
     const createdBy = account._id;
     const newService = new Service({
-      status: defaultstatus,
+      status,
       serviceCode,
       price,
       serviceName,
-      category: categoryData._id,
+      category: categoryExists._id,
       description,
       notes,
-      image: image || null,
+      image: imageId || null,
       createdBy,
     });
 
     const savedService = await newService.save();
+    const serviceWithImage = await Service.findById(savedService._id).populate({
+      path: "image",
+      select: "url",
+    });
+
     res.status(201).json({
       message: "Service created successfully",
-      data: savedService,
+      data: serviceWithImage,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -82,8 +96,19 @@ exports.getAllServices = async (req, res) => {
     const services = await Service.find(serviceQuery)
       .skip(skip)
       .limit(parseInt(limit))
+      .populate({
+        path: "image",
+        select: "url",
+      })
+      .populate({
+        path: "category",
+        select: "categoryName",
+      })
+      .populate({
+        path: "createdBy",
+        select: "fullName",
+      })
       .exec();
-
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
@@ -107,7 +132,24 @@ exports.getAllServices = async (req, res) => {
 exports.getServiceById = async (req, res) => {
   try {
     const { id } = req.params;
-    const service = await Service.findById(id).populate("category");
+    const service = await Service.findById(id)
+      .populate({
+        path: "image",
+        select: "url",
+      })
+      .populate({
+        path: "category",
+        select: "categoryName",
+      })
+      .populate({
+        path: "createdBy",
+        select: "fullName",
+      })
+      .populate({
+        path: "updatedBy",
+        select: "fullName",
+      })
+      .exec();
 
     if (!service) {
       return res.status(404).json({ message: "Service not found" });
@@ -128,14 +170,22 @@ exports.updateService = async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      status,
       serviceName,
       description,
       notes,
-      image,
+      category: categoryname,
       serviceCode,
       price,
+      status,
     } = req.body;
+
+    let imageId = null;
+    if (req.file) {
+      const imageUrl = req.file.location;
+      const fileType = req.file.mimetype.includes("image") ? "image" : "pdf";
+
+      imageId = await saveFile(imageUrl, fileType);
+    }
 
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
@@ -152,13 +202,15 @@ exports.updateService = async (req, res) => {
         .json({ error: "Permission denied. User is not an Admin." });
     }
 
-    // Đầu vào của category là id
-    // const categoryData = await CategoryService.findById(category);
-    // if (!categoryData) {
-    //   return res
-    //     .status(404)
-    //     .json({ error: `Category with id '${category}' not found.` });
-    // }
+    console.log(categoryname);
+    // check Category Name
+    const categoryExists = await CategoryService.findOne({
+      categoryName: categoryname,
+    });
+
+    if (!categoryExists) {
+      return res.status(404).json({ error: "Loại dịch vụ không tồn tại." });
+    }
 
     const updatedBy = account._id;
     console.log(updatedBy);
@@ -169,11 +221,11 @@ exports.updateService = async (req, res) => {
         serviceCode,
         price,
         serviceName,
+        category: categoryExists._id,
         description,
         notes,
-        image: image || null,
+        image: imageId || null,
         updatedBy,
-        updatedAt: new Date(),
       },
       { new: true, runValidators: true }
     );
@@ -182,9 +234,16 @@ exports.updateService = async (req, res) => {
       return res.status(404).json({ error: "Service not found" });
     }
 
+    const updatedServiceFinal = await Service.findById(
+      updatedService._id
+    ).populate({
+      path: "image",
+      select: "url",
+    });
+
     res.status(200).json({
       message: "Service updated successfully",
-      data: updatedService,
+      data: updatedServiceFinal,
     });
   } catch (error) {
     if (error.name === "CastError") {

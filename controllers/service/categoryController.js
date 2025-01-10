@@ -5,7 +5,7 @@ const Account = require("../../models/Account/Account");
 
 exports.createCategory = async (req, res) => {
   try {
-    const { categoryName, description, createdAt, image } = req.body;
+    const { categoryName, description } = req.body;
 
     // Lấy thông tin tài khoản từ req.user (đã được middleware authenticateToken gắn vào)
     const userId = req.user.id;
@@ -32,8 +32,6 @@ exports.createCategory = async (req, res) => {
       categoryName,
       description,
       createdBy,
-      image: image || null,
-      createdAt: createdAt || new Date(),
     });
 
     const savedCategory = await newCategory.save();
@@ -142,7 +140,7 @@ exports.getCategoryById = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { categoryName, description, image } = req.body;
+    const { categoryName, description } = req.body;
 
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
@@ -167,9 +165,7 @@ exports.updateCategory = async (req, res) => {
       {
         categoryName,
         description,
-        image: image || null,
         updatedBy,
-        updatedAt: new Date(),
       },
       { new: true, runValidators: true } // Trả về document mới nhất sau khi cập nhật
     );
