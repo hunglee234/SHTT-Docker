@@ -14,48 +14,58 @@ const infoSchema = new mongoose.Schema({
 });
 
 // Cập nhật schema chính của `Profile`
-const profileSchema = new mongoose.Schema({
-  id: {
-    type: mongoose.Schema.Types.ObjectId,
-    default: () => new mongoose.Types.ObjectId(),
-  },
-  profileCode: { type: String, unique: true, default: "" },
-  registeredService: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "registeredService",
-    required: true,
-  },
-  info: { type: [infoSchema], required: true }, // Tham chiếu tới danh sách info
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Account",
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  processes: [
-    {
+const profileSchema = new mongoose.Schema(
+  {
+    id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Process",
+      default: () => new mongoose.Types.ObjectId(),
     },
-  ],
-  record: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: "Record",
-    default: [],
+    profileCode: { type: String, unique: true, default: "" },
+    registeredService: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "registeredService",
+      required: true,
+    },
+    info: { type: [infoSchema], required: true }, // Tham chiếu tới danh sách info
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    processes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Process",
+      },
+    ],
+    record: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Record",
+      default: [],
+    },
+    serviceId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service", // Tham chiếu tới Service
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected", "under review"],
+      default: "pending",
+    },
+    image: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "File",
+      default: null,
+    },
   },
-  serviceId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Service", // Tham chiếu tới Service
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ["pending", "approved", "rejected", "under review"],
-    default: "pending",
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
 module.exports = mongoose.model("Profile", profileSchema);
