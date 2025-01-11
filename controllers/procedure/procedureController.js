@@ -80,8 +80,8 @@ exports.getAllProcedures = async (req, res) => {
       search_value.trim() !== "" &&
       search_value.trim() !== '""'
     ) {
-      const cleanSearchValue = search_value.replace(/"/g, "").trim(); // Loại bỏ dấu ngoặc kép và khoảng trắng
-      procedureQuery.name = { $regex: cleanSearchValue, $options: "i" }; // Tìm kiếm không phân biệt hoa thường
+      const cleanSearchValue = search_value.replace(/"/g, "").trim(); 
+      procedureQuery.name = { $regex: cleanSearchValue, $options: "i" }; 
     }
 
     const procedures = await Procedure.find(procedureQuery);

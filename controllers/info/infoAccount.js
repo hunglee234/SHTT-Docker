@@ -64,15 +64,17 @@ exports.updateMe = async (req, res) => {
   try {
     const userId = req.user.id;
     const {
-      fullName,
-      dateOfBirth,
+      website,
+      companyName,
+      joinDate,
       gender,
+      fullName,
       email,
       phone,
+      dateOfBirth,
       address,
       username,
       password,
-      joinDate,
     } = req.body;
 
     // Kiểm tra avatar nếu có file được tải lên
@@ -117,8 +119,12 @@ exports.updateMe = async (req, res) => {
     if (avatarId) {
       staffAccount.avatar = avatarId;
     }
+    // website,
+    //   companyName
 
     // Cập nhật các thông tin từ StaffAccount
+    if (website) staffAccount.website = website;
+    if (companyName) staffAccount.companyName = companyName;
     if (phone) staffAccount.phone = phone;
     if (address) staffAccount.address = address;
     if (dateOfBirth) {
@@ -152,6 +158,9 @@ exports.updateMe = async (req, res) => {
       });
 
     const responseData = {
+      id: updatedStaffAccount._id,
+      website: updatedStaffAccount.website,
+      companyName: updatedStaffAccount.companyName,
       avatar: updatedStaffAccount.avatar?.url || null,
       password: updatedStaffAccount.account.password,
       fullName: updatedStaffAccount.account.fullName,

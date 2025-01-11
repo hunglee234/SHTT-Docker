@@ -1,4 +1,5 @@
 const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
 const { saveAvatar } = require("../../utils/saveAvatar");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
@@ -216,6 +217,9 @@ exports.getStaffCustomerId = async (req, res) => {
     const { id } = req.params;
     const { id: userId } = req.user;
 
+    const { ObjectId } = mongoose.Types;
+    const objectId = new ObjectId(id);
+
     // Lấy thông tin tài khoản của người dùng hiện tại
     const currentUser = await Account.findById(userId).populate("role");
 
@@ -227,7 +231,7 @@ exports.getStaffCustomerId = async (req, res) => {
     } = currentUser;
 
     // Tìm nhân viên theo ID và populate thông tin account, role
-    const staff = await StaffAccount.findById(id)
+    const staff = await StaffAccount.findById(objectId)
       .populate({
         path: "account",
         select: "fullName email username avatar role",
@@ -245,12 +249,12 @@ exports.getStaffCustomerId = async (req, res) => {
         .json({ error: "Không tìm thấy nhân viên với ID được cung cấp" });
     }
 
-    // Kiểm tra quyền truy cập của Manager
-    if (userRole === "Admin" && staff.createdByManager.toString() !== userId) {
-      return res.status(403).json({
-        message: "Bạn không có quyền truy cập vào thông tin của nhân viên này.",
-      });
-    }
+    // // Kiểm tra quyền truy cập của Manager
+    // if (userRole === "Admin" && staff.createdByManager.toString() !== userId) {
+    //   return res.status(403).json({
+    //     message: "Bạn không có quyền truy cập vào thông tin của nhân viên này.",
+    //   });
+    // }
 
     // Lấy URL của avatar nếu có
     const avatarUrl = staff.avatar?.url || null;
