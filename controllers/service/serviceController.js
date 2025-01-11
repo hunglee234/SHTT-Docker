@@ -366,7 +366,6 @@ exports.registerService = async (req, res) => {
       serviceId,
       info: responseObject.info,
       createdBy: createdUserId,
-      image: image || null,
       createdAt: new Date(),
     });
     const savedProfile = await newProfile.save();
@@ -398,10 +397,6 @@ exports.registerService = async (req, res) => {
           path: "createdUserId", // Tham chiếu đến Category trong Service
           select: "fullName",
         },
-      })
-      .populate({
-        path: "image",
-        select: "fileUrl",
       })
       .select("_id status");
     // Kiểm tra nếu không tìm thấy profile
