@@ -40,7 +40,7 @@ exports.createTicket = async (req, res) => {
 exports.getAllTickets = async (req, res) => {
   try {
     const user = req.user;
-    const { search_value, form_date, to_date } = req.query;
+    const { search_value, from_date, to_date } = req.query;
 
     // Khởi tạo query để tìm kiếm
     let ticketsQuery = {};
@@ -61,9 +61,9 @@ exports.getAllTickets = async (req, res) => {
     }
 
     // Bộ lọc theo form_date và to_date (ngày tháng)
-    if (form_date && to_date) {
+    if (from_date && to_date) {
       const startDate = moment
-        .utc(form_date, "DD/MM/YYYY")
+        .utc(from_date, "DD/MM/YYYY")
         .startOf("day")
         .toDate();
       const endDate = moment.utc(to_date, "DD/MM/YYYY").endOf("day").toDate();
