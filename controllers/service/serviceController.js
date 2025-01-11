@@ -20,6 +20,7 @@ exports.createService = async (req, res) => {
       serviceCode,
       price,
       status,
+      formNumber,
     } = req.body;
 
     let imageId = null;
@@ -63,6 +64,7 @@ exports.createService = async (req, res) => {
       description,
       notes,
       image: imageId || null,
+      formNumber,
       createdBy,
     });
 
@@ -293,31 +295,32 @@ exports.deleteService = async (req, res) => {
 
 // Chức năng cho User, Manager, Nhân viên, cộng tác viên
 
-// Thêm Form Đăng Ký vào Schema
+// Đăng ký dịch vụ
 exports.registerService = async (req, res) => {
-  const { serviceId } = req.params;
-  const { info, image } = req.body;
+  const { form } = req.params;
   const createdUserId = req.user.id;
-
-  if (!mongoose.Types.ObjectId.isValid(serviceId)) {
-    return res.status(400).json({ message: "ID dịch vụ không hợp lệ!" });
-  }
 
   try {
     // Tìm dịch vụ
-    const service = await Service.findById(serviceId).populate("createdBy");
+    const service = await Service.findOne({
+      formNumber: form,
+    }).populate("createdBy");
+    // console.log("Tìm dịch vụ theo form ", service);
     if (!service) {
       return res.status(404).json({ message: "Dịch vụ không tồn tại!" });
     }
+    // console.log("Đây là id dịch vụ theo form ", service._id);
 
-    // Lấy các trường 'info' từ body (thông tin như người nộp đơn, dịch vụ, etc.)
     const infoData = JSON.parse(req.body.info || "[]");
-    // console.log(req.body.info);
-    // Lấy danh sách file từ gallery
-    const galleryFiles = req.files.gallery || [];
-    // console.log(req.files.gallery);
 
-    // Tạo responseObject cho phần text (info) và file (gallery)
+    const galleryFiles = req.files.gallery || [];
+
+    let imageId = null;
+    if (req.files.image && req.files.image[0].mimetype.includes("image")) {
+      const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
+      imageId = await saveFile(imageUrl, "image");
+    }
+
     const responseObject = {
       info: infoData.map((infoItem) => ({
         type: infoItem.type,
@@ -342,8 +345,6 @@ exports.registerService = async (req, res) => {
       })),
     };
 
-    console.log(JSON.stringify(responseObject.info, null, 2));
-
     const managerUserId = service.createdBy?._id;
     if (!managerUserId) {
       return res
@@ -363,13 +364,15 @@ exports.registerService = async (req, res) => {
     // phải thêm serviceId vào newProfile
     const newProfile = new Profile({
       registeredService: savedService._id,
-      serviceId,
+      serviceId: service._id,
       info: responseObject.info,
       createdBy: createdUserId,
+      image: imageId || null,
       createdAt: new Date(),
     });
     const savedProfile = await newProfile.save();
 
+    console.log("Phần info trong Profile", savedProfile.info);
     // Tạo bản ghi lịch sử chỉnh sửa (Record)
     const initialRecord = new Record({
       profileId: savedProfile._id,
@@ -398,7 +401,13 @@ exports.registerService = async (req, res) => {
           select: "fullName",
         },
       })
-      .select("_id status");
+      .populate({
+        path: "image",
+        select: "url",
+      })
+      .select("_id status info");
+
+    console.log("hồ sơ đăng ký chi tiết", fullProfile);
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -419,101 +428,134 @@ exports.registerService = async (req, res) => {
 };
 
 // Update 09/01/2025 updateProfile Info
-// exports.updateProfileInfo = async (req, res) => {
-//   try {
-//     const { profileId, serviceId, updatedInfo } = req.body;
-//     const userId = req.userId; // Giả định userId được gắn vào request từ middleware xác thực
+exports.updateProfileInfo = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+    const userId = req.user.id;
 
-//     // Tìm hồ sơ theo profileId và serviceId
-//     const profile = await Profile.findOne({
-//       _id: profileId,
-//       serviceId,
-//     }).populate("record");
+    // Tìm hồ sơ theo profileId
+    const profile = await Profile.findById(profileId).populate("record");
 
-//     if (!profile) {
-//       return res
-//         .status(404)
-//         .json({ message: "Hồ sơ hoặc dịch vụ không tồn tại" });
-//     }
+    if (!profile) {
+      return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
+    }
 
-//     // Lấy dữ liệu hiện tại của `info` để so sánh
-//     const oldInfo = profile.info;
+    // Lấy dữ liệu hiện tại của `info`
+    const oldInfo = profile.info;
+    const updatedInfo = JSON.parse(req.body.info || "[]"); // Lấy thông tin mới từ request body
 
-//     // Khởi tạo danh sách thay đổi
-//     const changes = [];
+    const galleryFiles = req.files.gallery || [];
 
-//     // Lặp qua các phần tử `info` để so sánh và cập nhật
-//     updatedInfo.forEach((newInfo) => {
-//       const oldInfoSection = oldInfo.find(
-//         (section) => section.type === newInfo.type
-//       );
-//       if (!oldInfoSection) return;
+    let imageId = null;
+    if (req.files.image && req.files.image[0].mimetype.includes("image")) {
+      const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
+      imageId = await saveFile(imageUrl, "image");
+    }
 
-//       newInfo.fields.forEach((newField) => {
-//         const oldField = oldInfoSection.fields.find(
-//           (field) => field.name === newField.name
-//         );
-//         if (!oldField || oldField.value === newField.value) return;
+    const changes = [];
 
-//         // Ghi nhận thay đổi
-//         changes.push({
-//           type: newInfo.type,
-//           fieldName: newField.name,
-//           oldValue: oldField.value,
-//           newValue: newField.value,
-//         });
+    // Lặp qua các phần tử `updatedInfo` để so sánh và cập nhật
+    updatedInfo.forEach((newInfo) => {
+      // console.log("Dữ liệu mới (newInfo):", newInfo);
+      const oldInfoSection = oldInfo.find(
+        (section) => section.type === newInfo.type
+      );
+      // console.log("dữ liệu cũ", oldInfoSection);
+      if (!oldInfoSection) return;
 
-//         // Cập nhật giá trị trong `info`
-//         oldField.value = newField.value;
-//       });
-//     });
+      newInfo.fields.forEach((newField) => {
+        const oldField = oldInfoSection.fields.find(
+          (field) => field.name === newField.name
+        );
+        // Kiểm tra chi tiết giá trị mới
+        console.log("Kiểm tra chi tiết giá trị mới", newField.value);
+        if (!oldField || oldField.value === newField.value) return;
 
-//     // Nếu không có thay đổi, trả về phản hồi
-//     if (changes.length === 0) {
-//       return res
-//         .status(200)
-//         .json({ message: "Không có thay đổi nào được thực hiện" });
-//     }
+        // Ghi nhận thay đổi
+        changes.push({
+          type: newInfo.type,
+          fieldName: newField.name,
+          oldValue: oldField.value,
+          newValue: newField.value,
+        });
+        // Cập nhật giá trị trong `info`
+        oldField.value = newField.value;
+      });
+    });
 
-//     // Kiểm tra xem đã có Record hay chưa
-//     let record = await Record.findOne({ profileId });
+    // Xử lý file mới và cập nhật gallery
+    updatedInfo.forEach((newInfo) => {
+      newInfo.fields.forEach((newField, index) => {
+        if (newField.fieldType === "image" || newField.fieldType === "pdf") {
+          const file = galleryFiles[index];
+          if (file) {
+            console.log(file);
+            newField.value = file.location;
+            console.log("file.location", file.location);
+            console.log("newField.value", newField.value);
+          }
+        }
+      });
+    });
 
-//     if (record) {
-//       // Cập nhật các thay đổi vào Record hiện tại
-//       record.changes.push(...changes);
-//       record.updatedAt = new Date();
-//       await record.save();
-//     } else {
-//       // Tạo Record mới nếu chưa tồn tại
-//       record = new Record({
-//         profileId,
-//         userId,
-//         changes,
-//         updatedAt: new Date(),
-//       });
-//       await record.save();
+    // Nếu không có thay đổi, trả về phản hồi
+    if (changes.length === 0 && !imageId && galleryFiles.length === 0) {
+      return res
+        .status(200)
+        .json({ message: "Không có thay đổi nào được thực hiện" });
+    }
 
-//       // Thêm record mới vào profile
-//       profile.record.push(record._id);
-//     }
+    // Kiểm tra xem đã có Record hay chưa
+    // let record = await Record.findOne({ profileId });
 
-//     // Lưu hồ sơ đã cập nhật
-//     await profile.save();
+    // ĐÂY LÀ PHẦN SẼ UPDATE TÍNH NĂNG RECORD
+    // if (record) {
+    //   // Cập nhật các thay đổi vào Record hiện tại
+    //   record.changes.push(...changes);
+    //   record.updatedAt = new Date();
+    //   await record.save();
+    // } else {
+    //   // Tạo Record mới nếu chưa tồn tại
+    //   record = new Record({
+    //     profileId,
+    //     userId,
+    //     changes,
+    //     updatedAt: new Date(),
+    //   });
+    //   await record.save();
 
-//     // Trả về phản hồi
-//     res.status(200).json({
-//       message: "Cập nhật thành công",
-//       changes,
-//       updatedProfile: profile,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({
-//       message: "Đã xảy ra lỗi khi cập nhật hồ sơ dịch vụ",
-//       error: error.message,
-//     });
-//   }
-// };
+    //   // Thêm record mới vào profile
+    //   profile.record.push(record._id);
+    // }
+
+    // Cập nhật lại thông tin của hồ sơ
+    profile.info = updatedInfo;
+
+    if (imageId) {
+      profile.image = imageId;
+    }
+
+    // Lưu hồ sơ đã cập nhật
+    await profile.save();
+
+    const fullProFileWithImage = await Profile.findById(profile._id).populate({
+      path: "image",
+      select: "url",
+    });
+
+    // Trả về phản hồi
+    res.status(200).json({
+      message: "Cập nhật thành công",
+      updatedProfile: fullProFileWithImage,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Đã xảy ra lỗi khi cập nhật hồ sơ dịch vụ",
+      error: error.message,
+    });
+  }
+};
 
 // Lấy danh sách dịch vụ
 // Nhân viên xem được các dịch vụ mình chịu trách nhiệm
@@ -541,6 +583,7 @@ exports.getServiceList = async (req, res) => {
           path: "category",
           select: "categoryName",
         },
+        select: "serviceName description",
       });
 
     // Lấy tổng số dịch vụ để tính tổng số trang
@@ -591,18 +634,22 @@ exports.getProfileDetails = async (req, res) => {
       },
     ]);
 
-    console.log(profile);
+    const fullProFileWithImage = await Profile.findById(profile._id).populate({
+      path: "image",
+      select: "url",
+    });
+
     // Kiểm tra nếu không tìm thấy Profile hoặc RegisteredService
     if (!profile || !profile.registeredService) {
       return res
         .status(404)
-        .json({ message: "Không tìm thấy hồ sơ hoặc dịch vụ của người dùng!" });
+        .json({ message: "Không tìm thấy hồ sơ của người dùng!" });
     }
 
     // Trả về thông tin chi tiết Profile và dịch vụ
     return res.status(200).json({
       message: "Thông tin chi tiết hồ sơ và dịch vụ:",
-      data: profile,
+      data: fullProFileWithImage,
     });
   } catch (error) {
     console.error("Lỗi khi lấy chi tiết hồ sơ:", error.message);

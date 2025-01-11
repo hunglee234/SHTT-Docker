@@ -4,22 +4,32 @@ const { authenticateToken } = require("../../middleware/auth");
 const router = express.Router();
 const upload = require("../../utils/multer");
 
-// Đăng ký dịch vụ (cần đăng nhập)
 router.post(
-  "/register/:serviceId",
+  "/submit/:form",
   authenticateToken,
-  upload.fields([{ name: "gallery", maxCount: 3 }]),
+  upload.fields([
+    { name: "gallery", maxCount: 3 },
+    { name: "image", maxCount: 1 },
+  ]),
   serviceController.registerService
 );
 
-// router.put("/update", authenticateToken, serviceController.updateProfileInfo);
+router.put(
+  "/update/:profileId",
+  authenticateToken,
+  upload.fields([
+    { name: "gallery", maxCount: 3 },
+    { name: "image", maxCount: 1 },
+  ]),
+  serviceController.updateProfileInfo
+);
 
 // Xem lịch sử chỉnh sửa hồ sơ đăng ký dịch vụ
-router.get(
-  "/history/:profileId",
-  authenticateToken,
-  serviceController.getEditHistory
-);
+// router.get(
+//   "/history/:profileId",
+//   authenticateToken,
+//   serviceController.getEditHistory
+// );
 
 // Lấy danh sách dịch vụ (cần đăng nhập)
 // Chức năng xem full Danh sách Hồ sơ đăng ký
