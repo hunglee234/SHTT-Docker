@@ -5,6 +5,6 @@ const {
     listCustomers,
 } = require("../../../controllers/customer/customerController");
 
-router.post("/list", listCustomers);
+router.get("/list", listCustomers);
 
 module.exports = router;

@@ -4,7 +4,7 @@ const InfoStaff = require("../../models/Account/InfoStaff");
 
 exports.listCustomers = async (req, res) => {
     try {
-        const { page, limit } = req.body;
+        const { page, limit } = req.query;
         const managerRole = await Role.findOne({ name: "Manager" });
         if (!managerRole) {
             return res.status(404).json({ success: false, message: "Role 'Manager' không tồn tại." });
@@ -15,21 +15,20 @@ exports.listCustomers = async (req, res) => {
             .limit(Number(limit));
         const accountIds = accounts.map(account => account._id);
         const infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
-        .populate("account", "fullName email")
+        .populate("account", "fullName email").populate({
+            path: "avatar",
+            select: "url"
+        })
         .lean();
         const result = infoStaffs.map(infoStaff => ({
             accountId: infoStaff.account._id,
+            avatar: infoStaff.avatar,
             fullName: infoStaff.account.fullName,
             email: infoStaff.account.email,
             staffCode: infoStaff.staffCode,
-            dateOfBirth: infoStaff.dateOfBirth,
-            gender: infoStaff.gender,
             phone: infoStaff.phone,
-            address: infoStaff.address,
             joinDate: infoStaff.joinDate,
-            status: infoStaff.status,
-            companyName: infoStaff.companyName,
-            website: infoStaff.website,
+            status: infoStaff.status
         }));
         // Tổng số lượng tài khoản
         const totalItems = await Account.countDocuments({ role: managerRole._id });
