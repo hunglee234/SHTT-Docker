@@ -1,11 +1,11 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../../models/User/User");
-const InfoUser = require("../../models/User/InfoUser");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const SECRET_KEY = "hungdzvclra";
+const generateAutoCode = require("../../utils/autoIncrement");
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -83,10 +83,12 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Tìm vai trò mặc định "user"
-    const userAccount = await Role.findOne({ name: "User" });
+    // Tìm vai trò mặc định "Manager"
+    const userAccount = await Role.findOne({ name: "Manager" });
     if (!userAccount) {
-      return res.status(500).json({ message: "Default role 'user' not found" });
+      return res
+        .status(500)
+        .json({ message: "Default role 'Manager' not found" });
     }
 
     // Mã hóa mật khẩu
@@ -103,9 +105,11 @@ exports.register = async (req, res) => {
     // Lưu người dùng vào cơ sở dữ liệu
     const savedAccount = await newAccount.save();
 
+    const staffcodeAuto = await generateAutoCode("staffCode", "KH", 2);
     // Tạo InfoAccount
     const newInfoStaff = new StaffAccount({
       account: savedAccount._id,
+      staffCode: staffcodeAuto,
     });
     const savedInfoStaff = await newInfoStaff.save();
 

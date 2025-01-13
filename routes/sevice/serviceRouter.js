@@ -5,7 +5,7 @@ const router = express.Router();
 const upload = require("../../utils/multer");
 
 router.post(
-  "/submit/:form",
+  "/submit/:formName",
   authenticateToken,
   upload.fields([
     { name: "gallery", maxCount: 3 },
