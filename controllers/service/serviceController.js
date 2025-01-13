@@ -20,7 +20,6 @@ exports.createService = async (req, res) => {
       serviceCode,
       price,
       status,
-      formNumber,
     } = req.body;
 
     let imageId = null;
@@ -64,7 +63,6 @@ exports.createService = async (req, res) => {
       description,
       notes,
       image: imageId || null,
-      formNumber,
       createdBy,
     });
 
@@ -297,13 +295,13 @@ exports.deleteService = async (req, res) => {
 
 // Đăng ký dịch vụ
 exports.registerService = async (req, res) => {
-  const { form } = req.params;
+  const { formName } = req.params;
   const createdUserId = req.user.id;
 
   try {
     // Tìm dịch vụ
     const service = await Service.findOne({
-      formNumber: form,
+      formName: formName,
     }).populate("createdBy");
     // console.log("Tìm dịch vụ theo form ", service);
     if (!service) {

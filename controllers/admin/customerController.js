@@ -24,6 +24,7 @@ exports.createCustomer = async (req, res) => {
       password,
       role: roleName,
       status,
+      joinDate,
     } = req.body;
 
     let avatarId = null;
@@ -31,6 +32,11 @@ exports.createCustomer = async (req, res) => {
       const avatarUrl = req.file.location;
       avatarId = await saveAvatar(avatarUrl);
     }
+
+    const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
+      ? dayjs(joinDate, "DD/MM/YYYY").toDate()
+      : null;
+
     const userId = req.user.id;
 
     const account = await Account.findById(userId).populate("role");
@@ -102,6 +108,7 @@ exports.createCustomer = async (req, res) => {
       createdByManager: account._id,
       staffCode,
       status,
+      joinDate: parsedJoinDate,
     });
     const savedInfoStaff = await newInfoStaff.save(); // Lưu thông tin nhân viên vào DB
 
@@ -131,6 +138,7 @@ exports.createCustomer = async (req, res) => {
       username: savedAccount.username,
       role: savedAccount.role,
       status: savedInfoStaff.status,
+      joinDate: savedInfoStaff.joinDate,
       createdByManager: savedInfoStaff.createdByManager,
     };
 
@@ -231,7 +239,8 @@ exports.getStaffCustomerId = async (req, res) => {
     } = currentUser;
 
     // Tìm nhân viên theo ID và populate thông tin account, role
-    const staff = await StaffAccount.findById(objectId)
+
+    const staff = await StaffAccount.findOne({ account: objectId })
       .populate({
         path: "account",
         select: "fullName email username avatar role",
@@ -261,7 +270,7 @@ exports.getStaffCustomerId = async (req, res) => {
 
     // Dữ liệu trả về cho client
     const responseData = {
-      id: staff._id,
+      infoAccountID: staff._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
       companyName: staff.account.companyName,

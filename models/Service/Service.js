@@ -1,5 +1,15 @@
 const mongoose = require("mongoose");
 
+// Hàm loại bỏ dấu tiếng Việt
+function removeVietnameseTones(str) {
+  return str
+    .normalize("NFD") // Chuyển thành dạng tổ hợp ký tự
+    .replace(/[\u0300-\u036f]/g, "") // Loại bỏ các dấu
+    .replace(/đ/g, "d") // Chuyển đ -> d
+    .replace(/Đ/g, "D") // Chuyển Đ -> D
+    .replace(/[^\w\s\-]/g, "") // Loại bỏ các ký tự đặc biệt
+    .trim(); // Xóa khoảng trắng đầu/cuối
+}
 const serviceSchema = new mongoose.Schema(
   {
     id: {
@@ -57,8 +67,8 @@ const serviceSchema = new mongoose.Schema(
       ref: "File",
       default: null,
     },
-    formNumber: {
-      type: Number,
+    formName: {
+      type: String,
       required: false,
       unique: true,
     },
@@ -68,4 +78,16 @@ const serviceSchema = new mongoose.Schema(
   }
 );
 serviceSchema.index({ serviceName: "text" });
+// Middleware để tự động cập nhật formName từ serviceName
+serviceSchema.pre("save", function (next) {
+  if (this.serviceName) {
+    // Chuyển serviceName thành dạng slug và gán vào formName
+    this.formName = removeVietnameseTones(this.serviceName)
+      .toLowerCase() // Chuyển thành chữ thường
+      .replace(/[\s\-]+/g, "-") // Thay khoảng trắng hoặc dấu '-' bằng '-'
+      .replace(/[^\w\-]+/g, "") // Loại bỏ ký tự không hợp lệ
+      .replace(/^-+|-+$/g, ""); // Loại bỏ dấu '-' ở đầu hoặc cuối
+  }
+  next();
+});
 module.exports = mongoose.model("Service", serviceSchema);

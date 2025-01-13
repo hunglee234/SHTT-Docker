@@ -84,6 +84,13 @@ exports.updateMe = async (req, res) => {
       avatarId = await saveAvatar(avatarUrl);
     }
 
+    const existingEmail = await Account.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({
+        message: "Email đã tồn tại!",
+      });
+    }
+
     // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date
     const parsedDateOfBirth = dayjs(dateOfBirth, "DD/MM/YYYY").isValid()
       ? dayjs(dateOfBirth, "DD/MM/YYYY").toDate()
@@ -113,6 +120,7 @@ exports.updateMe = async (req, res) => {
     // Cập nhật các thông tin của tài khoản
     if (fullName) account.fullName = fullName;
     if (email) account.email = email;
+
     if (username) account.username = username;
 
     // Cập nhật avatar nếu có
