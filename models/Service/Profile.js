@@ -32,6 +32,17 @@ const profileSchema = new mongoose.Schema(
       ref: "Account",
       required: true,
     },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+    },
+    managerUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+      required: false,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

@@ -454,24 +454,25 @@ exports.deleteCustomer = async (req, res) => {
     const userId = req.user.id;
 
     // Lấy thông tin tài khoản hiện tại và vai trò
-    const currentUser = await Account.findById(userId).populate("role");
+    const currentUser = await Account.findById(id).populate("role");
     if (!currentUser) {
       return res.status(404).json({ message: "Tài khoản không tồn tại." });
     }
 
-    const userRole = currentUser.role.name;
-
     // Lấy thông tin StaffAccount
-    const staffAccount = await StaffAccount.findById(id).populate("account");
+    const staffAccount = await StaffAccount.findOne({
+      account: currentUser._id,
+    }).populate("account");
     if (!staffAccount) {
       return res.status(404).json({ message: "Khách hàng không tồn tại." });
     }
+    console.log(staffAccount);
 
-    // Xóa cả Account và StaffAccount
-    await Account.findByIdAndDelete(staffAccount.account._id);
-    await StaffAccount.findByIdAndDelete(id);
+    // // Xóa cả Account và StaffAccount
+    // await Account.findByIdAndDelete(currentUser._id);
+    // await StaffAccount.findByIdAndDelete(staffAccount._id);
 
-    res.status(200).json({ message: "Xóa khach hàng thành công." });
+    res.status(200).json({ message: "Xóa khách hàng thành công." });
   } catch (error) {
     console.error("Error in deleteStaff:", error);
     res.status(500).json({

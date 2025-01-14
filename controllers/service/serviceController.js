@@ -1,5 +1,6 @@
 const Service = require("../../models/Service/Service");
 const Account = require("../../models/Account/Account");
+const StaffAccount = require("../../models/Account/InfoStaff");
 const CategoryService = require("../../models/Service/CategoryService");
 const User = require("../../models/User/User");
 const RegisteredService = require("../../models/Service/RegisteredService");
@@ -89,9 +90,15 @@ exports.getAllServices = async (req, res) => {
     // Khởi tạo query để tìm kiếm
     let serviceQuery = {};
 
-    if (search_value) {
-      serviceQuery.$text = { $search: search_value };
+    if (
+      search_value &&
+      search_value.trim() !== "" &&
+      search_value.trim() !== '""'
+    ) {
+      const cleanSearchValue = search_value.replace(/"/g, "").trim();
+      serviceQuery.serviceName = { $regex: cleanSearchValue, $options: "i" };
     }
+
     const skip = (page - 1) * limit;
     const services = await Service.find(serviceQuery)
       .skip(skip)
@@ -292,7 +299,6 @@ exports.deleteService = async (req, res) => {
 };
 
 // Chức năng cho User, Manager, Nhân viên, cộng tác viên
-
 // Đăng ký dịch vụ
 exports.registerService = async (req, res) => {
   const { formName } = req.params;
@@ -343,8 +349,14 @@ exports.registerService = async (req, res) => {
       })),
     };
 
-    const managerUserId = service.createdBy?._id;
-    if (!managerUserId) {
+    // const managerUserId = service.createdBy?._id;
+
+    const managerInfo = await StaffAccount.findOne({ account: createdUserId });
+
+    // Tôi có bảng infoStaff, trong bảng InfoStaff này có createdByManager nào
+    // Tôi muốn truy xuất trong bảng InfoStaff để lấy thông tin Manager dựa trên id của infostaff
+    // Check lại logic của thêm sửa xóa tài khoản staff
+    if (!managerInfo) {
       return res
         .status(500)
         .json({ message: "Không tìm thấy thông tin người quản lý dịch vụ!" });
@@ -352,7 +364,7 @@ exports.registerService = async (req, res) => {
     // Tạo tài liệu RegisteredService
     const newService = new RegisteredService({
       serviceId: service._id,
-      managerUserId,
+      managerUserId: managerInfo?.createdByManager || null,
       createdUserId,
       createdAt: new Date(),
     });
@@ -370,7 +382,6 @@ exports.registerService = async (req, res) => {
     });
     const savedProfile = await newProfile.save();
 
-    console.log("Phần info trong Profile", savedProfile.info);
     // Tạo bản ghi lịch sử chỉnh sửa (Record)
     const initialRecord = new Record({
       profileId: savedProfile._id,
@@ -404,8 +415,6 @@ exports.registerService = async (req, res) => {
         select: "url",
       })
       .select("_id status info");
-
-    console.log("hồ sơ đăng ký chi tiết", fullProfile);
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -526,6 +535,7 @@ exports.updateProfileInfo = async (req, res) => {
     //   profile.record.push(record._id);
     // }
 
+    profile.updatedBy = userId;
     // Cập nhật lại thông tin của hồ sơ
     profile.info = updatedInfo;
 
@@ -565,40 +575,47 @@ exports.getServiceList = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  if (!userId) {
-    return res.status(400).json({ message: "Thiếu userId trong yêu cầu!" });
-  }
-
   try {
     // Truy vấn danh sách dịch vụ mà userId đã đăng ký với phân trang
-    const userServices = await RegisteredService.find({
-      createdUserId: userId,
-    })
-      .skip(skip) // Giới hạn số lượng bản ghi trả về
-      .populate({
-        path: "serviceId",
-        populate: {
-          path: "category",
-          select: "categoryName",
-        },
-        select: "serviceName description",
-      });
-
-    // Lấy tổng số dịch vụ để tính tổng số trang
-    const totalServices = await RegisteredService.countDocuments({
+    const listRegisteredServices = await RegisteredService.find({
       createdUserId: userId,
     });
 
+    // Lấy danh sách _id của tất cả tài liệu
+    const registeredServiceIds = listRegisteredServices.map(
+      (service) => service._id
+    );
+
+    const listProfile = await Profile.find({
+      registeredService: { $in: registeredServiceIds },
+    })
+      .populate([
+        {
+          path: "registeredService",
+          populate: {
+            path: "serviceId",
+            select: "serviceName description",
+          },
+        },
+      ])
+      .skip(skip)
+      .limit(limit);
+
+    // Lấy tổng số dịch vụ để tính tổng số trang
+    const totalProfiles = await Profile.countDocuments({
+      registeredService: { $in: registeredServiceIds },
+    });
+
     // Tính tổng số trang
-    const totalPages = Math.ceil(totalServices / limit);
+    const totalPages = Math.ceil(totalProfiles / limit);
 
     return res.status(200).json({
-      message: "Danh sách dịch vụ của bạn:",
-      data: userServices,
+      message: "Danh sách hồ sơ: ",
+      data: listProfile,
       pagination: {
         currentPage: page,
         totalPages,
-        totalServices,
+        totalProfiles,
         limit,
       },
     });
@@ -628,14 +645,30 @@ exports.getProfileDetails = async (req, res) => {
       },
       {
         path: "processes",
-        select: "processContent completionDate documents",
+        select: "processContent completionDate pdfUrl status",
+      },
+      {
+        path: "image",
+        select: "url",
+      },
+      {
+        path: "createdBy updatedBy",
+        select: "fullName",
       },
     ]);
 
-    const fullProFileWithImage = await Profile.findById(profile._id).populate({
-      path: "image",
-      select: "url",
-    });
+    const infoCustomer = await StaffAccount.findOne({
+      account: profile.createdBy,
+    })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
+      });
 
     // Kiểm tra nếu không tìm thấy Profile hoặc RegisteredService
     if (!profile || !profile.registeredService) {
@@ -646,8 +679,11 @@ exports.getProfileDetails = async (req, res) => {
 
     // Trả về thông tin chi tiết Profile và dịch vụ
     return res.status(200).json({
-      message: "Thông tin chi tiết hồ sơ và dịch vụ:",
-      data: fullProFileWithImage,
+      message: "Thông tin chi tiết hồ sơ :",
+      data: {
+        profile: profile,
+        createdByInfo: infoCustomer,
+      },
     });
   } catch (error) {
     console.error("Lỗi khi lấy chi tiết hồ sơ:", error.message);
@@ -661,21 +697,47 @@ exports.getProfileDetails = async (req, res) => {
 
 // Manager chỉ xóa được đăng ký dịch vụ của khách
 // Xóa dịch vụ
-exports.deleteServiceCustomer = (req, res) => {
-  const { serviceId } = req.params;
+exports.deleteProfile = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const registeredServices = await RegisteredService.find({
+      createdUserId: userId,
+    }).populate([
+      {
+        path: "serviceId",
+        select: "serviceName description",
+      },
+      {
+        path: "profileId",
+      },
+    ]);
 
-  const serviceIndex = services.findIndex((s) => s.id === parseInt(serviceId));
+    // Lấy danh sách profileId từ các dịch vụ đã đăng ký
+    const profileIds = registeredServices.map(
+      (service) => service?.profileId?._id
+    );
 
-  if (serviceIndex === -1) {
-    return res.status(404).json({ message: "Không tìm thấy dịch vụ!" });
+    console.log("Danh sách Profile cần xóa:", profileIds);
+
+    // Xóa các dịch vụ đã đăng ký liên quan đến userId
+    await RegisteredService.deleteMany({ createdUserId: userId });
+
+    // Xóa các hồ sơ liên quan
+    await Profile.deleteMany({ _id: { $in: profileIds } });
+
+    console.log("Hồ sơ và dịch vụ đã được xóa thành công.");
+
+    // Phản hồi thành công
+    return res.status(200).json({
+      message:
+        "Hồ sơ và các dịch vụ đã đăng ký của bạn đã được xóa thành công.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "Có lỗi xảy ra, vui lòng thử lại sau!" });
   }
-
-  const deletedService = services.splice(serviceIndex, 1);
-
-  return res.status(200).json({
-    message: "Xóa dịch vụ thành công!",
-    data: deletedService,
-  });
 };
 
 // Xem lịch sử chỉnh sửa hồ sơ đăng ký dịch vụ
