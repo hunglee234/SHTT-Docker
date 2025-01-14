@@ -3,14 +3,16 @@ const Profile = require("../../models/Service/Profile");
 
 exports.createProcess = async (req, res) => {
   const { profileId } = req.params;
-  const { processContent, completionDate, documents } = req.body;
-
+  const { name, status, completionDate } = req.body;
+  const pdfFile = req.file || {};
+  const pdfId = pdfFile.location;
   try {
     // Tạo tiến trình mới
     const newProcess = await Process.create({
-      processContent,
-      completionDate,
-      documents,
+      processContent: name,
+      completionDate: completionDate,
+      pdfUrl: pdfId,
+      status: status,
     });
 
     // Cập nhật Profile để thêm tiến trình vào danh sách

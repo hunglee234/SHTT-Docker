@@ -10,18 +10,15 @@ const ProcessSchema = new mongoose.Schema(
       type: Date,
       required: false,
     },
-    documents: [
-      {
-        name: {
-          type: String,
-          required: false,
-        },
-        url: {
-          type: String,
-          required: false,
-        },
-      },
-    ],
+    pdfUrl: {
+      type: String,
+      required: false,
+    },
+    status: {
+      type: String,
+      enum: ["Đã thực hiện", "Chờ duyệt"],
+      default: "Chờ duyệt",
+    },
   },
   { timestamps: true }
 );

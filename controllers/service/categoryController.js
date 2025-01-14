@@ -82,6 +82,7 @@ exports.getAllCategory = async (req, res) => {
             name: service.serviceName,
             price: service.price,
             description: service.description,
+            formName: service.formName,
           })),
         };
       })

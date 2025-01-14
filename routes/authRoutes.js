@@ -1,5 +1,5 @@
 const express = require("express");
-const  router = express.Router();
+const router = express.Router();
 const passport = require("passport");
 require("../config/passportGG");
 require("../config/passportFB");

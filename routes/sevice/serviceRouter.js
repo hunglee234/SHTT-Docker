@@ -24,13 +24,6 @@ router.put(
   serviceController.updateProfileInfo
 );
 
-// Xem lịch sử chỉnh sửa hồ sơ đăng ký dịch vụ
-// router.get(
-//   "/history/:profileId",
-//   authenticateToken,
-//   serviceController.getEditHistory
-// );
-
 // Lấy danh sách dịch vụ (cần đăng nhập)
 // Chức năng xem full Danh sách Hồ sơ đăng ký
 router.get("/list", authenticateToken, serviceController.getServiceList);
@@ -45,10 +38,10 @@ router.get(
 // Quyền này dành cho nhân viên và manager
 // chỉ xóa phần đăng ký dịch vụ của khách
 // // Xóa dịch vụ (cần đăng nhập)
-// router.delete(
-//   "/:serviceId",
-//   authenticateToken,
-//   serviceController.deleteService
-// );
+router.delete(
+  "/list/:profileId",
+  authenticateToken,
+  serviceController.deleteProfile
+);
 
 module.exports = router;
