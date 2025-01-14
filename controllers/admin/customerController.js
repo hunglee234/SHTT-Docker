@@ -469,8 +469,8 @@ exports.deleteCustomer = async (req, res) => {
     console.log(staffAccount);
 
     // // Xóa cả Account và StaffAccount
-    // await Account.findByIdAndDelete(currentUser._id);
-    // await StaffAccount.findByIdAndDelete(staffAccount._id);
+    await Account.findByIdAndDelete(currentUser._id);
+    await StaffAccount.findByIdAndDelete(staffAccount._id);
 
     res.status(200).json({ message: "Xóa khách hàng thành công." });
   } catch (error) {

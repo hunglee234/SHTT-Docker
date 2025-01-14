@@ -8,6 +8,7 @@ const {
   getServiceById,
   updateService,
   deleteService,
+  getServiceByUserId,
 } = require("../../../controllers/service/serviceController");
 
 //update ảnh
@@ -21,5 +22,7 @@ router.get("/:id", getServiceById);
 router.put("/:id", upload.single("image"), updateService);
 
 router.delete("/:id", deleteService);
+
+router.get("/u/:userId", getServiceByUserId);
 
 module.exports = router;

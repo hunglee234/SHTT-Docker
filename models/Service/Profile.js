@@ -4,12 +4,12 @@ const mongoose = require("mongoose");
 const fieldSchema = new mongoose.Schema({
   name: { type: String, required: true },
   value: { type: mongoose.Schema.Types.Mixed, required: true },
-  fieldType: { type: String, required: true }, // text, number, date, image, etc.
+  fieldType: { type: String, required: true },
 });
 
 // Định nghĩa schema cho phần `info` bên trong `Profile`
 const infoSchema = new mongoose.Schema({
-  type: { type: String, required: true }, // Ví dụ: Người nộp đơn, Tác giả
+  type: { type: String, required: true },
   fields: { type: [fieldSchema], required: true },
 });
 
@@ -26,7 +26,7 @@ const profileSchema = new mongoose.Schema(
       ref: "registeredService",
       required: true,
     },
-    info: { type: [infoSchema], required: true }, // Tham chiếu tới danh sách info
+    info: { type: [infoSchema], required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",

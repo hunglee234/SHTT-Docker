@@ -141,13 +141,6 @@ exports.createAccount = async (req, res) => {
 exports.getFullAccountList = async (req, res) => {
   try {
     // Tìm các tài khoản có vai trò Admin
-
-    // const adminAccounts = await Account.find().populate({
-    //   path: "role",
-    //   match: { name: "Admin" },
-    //   select: "name",
-    // });
-
     const staffAccounts = await StaffAccount.find().populate({
       path: "account",
       select: "fullName email username avatar role",

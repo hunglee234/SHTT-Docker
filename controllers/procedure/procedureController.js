@@ -72,7 +72,7 @@ exports.deleteProcedure = async (req, res) => {
 // Xem danh sách thủ tục
 exports.getAllProcedures = async (req, res) => {
   try {
-    const { search_value } = req.query;
+    const { search_value, page = 1, limit = 10 } = req.query;
     let procedureQuery = {};
 
     if (
@@ -80,13 +80,27 @@ exports.getAllProcedures = async (req, res) => {
       search_value.trim() !== "" &&
       search_value.trim() !== '""'
     ) {
-      const cleanSearchValue = search_value.replace(/"/g, "").trim(); 
-      procedureQuery.name = { $regex: cleanSearchValue, $options: "i" }; 
+      const cleanSearchValue = search_value.replace(/"/g, "").trim();
+      procedureQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const procedures = await Procedure.find(procedureQuery);
+    const skip = (page - 1) * limit;
+    const procedures = await Procedure.find(procedureQuery)
+      .skip(skip)
+      .limit(parseInt(limit));
 
-    res.status(200).json({ message: "Danh sách thủ tục:", data: procedures });
+    const totalProcedures = await Procedure.countDocuments(procedureQuery);
+    const totalPages = Math.ceil(totalProcedures / limit);
+
+    res.status(200).json({
+      message: "Danh sách thủ tục:",
+      data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalProcedures: totalProcedures,
+        procedures: procedures,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       message: "Lỗi khi lấy danh sách thủ tục!",

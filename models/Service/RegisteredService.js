@@ -19,10 +19,6 @@ const registeredServiceSchema = new mongoose.Schema(
       required: false,
       default: null,
     },
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
   },
   {
     timestamps: true,

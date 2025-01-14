@@ -14,8 +14,6 @@ const {
 // Tạo mới tài khoản nhân viên, cộng tác viên (CTV)
 router.post("/", upload.single("avatar"), createCustomer);
 
-router.get("/", getFullCustomerList);
-
 // Lấy thông tin chi tiết nhân viên
 router.get("/:id", getStaffCustomerId);
 
@@ -24,5 +22,7 @@ router.put("/:id", upload.single("avatar"), updateCustomer);
 
 // Xóa tài khoản nhân viên
 router.delete("/:id", deleteCustomer);
+
+
 
 module.exports = router;

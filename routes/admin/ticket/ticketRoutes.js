@@ -1,10 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const {
-  authenticateToken,
-  authorizeRole,
-} = require("../../../middleware/auth");
-
 const TicketController = require("../../../controllers/ticket/ticket");
 
 // Thêm Authenticate để bắt buộc phải login khi để lại ticket
@@ -24,6 +19,6 @@ router.put("/:id", TicketController.updateTicketStatus);
 // Xóa ticket
 router.delete("/:id", TicketController.deleteTicket);
 
-// router.get("/:userId");
+router.get("/u/:userId", TicketController.getTicketByUserId);
 
 module.exports = router;
