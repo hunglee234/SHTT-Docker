@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const processController = require("../../../controllers/process/processController");
+const serviceController = require("../../../controllers/service/serviceController");
 const upload = require("../../../utils/multer");
 // Route CRUD cho tiến trình
 router.post(
@@ -16,5 +17,9 @@ router.delete(
 );
 
 // Router Hồ sơ
+// Get danh sách hồ sơ và chi tiết hồ sơ
+// Tạo hồ sơ cho khách luôn
+
+router.get("/list", serviceController.getProfileList);
 
 module.exports = router;

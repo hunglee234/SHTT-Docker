@@ -51,6 +51,15 @@ exports.getAllTickets = async (req, res) => {
     // Khởi tạo query để tìm kiếm
     let ticketsQuery = {};
 
+    if (
+      search_value &&
+      search_value.trim() !== "" &&
+      search_value.trim() !== '""'
+    ) {
+      const cleanSearchValue = search_value.replace(/"/g, "").trim();
+      ticketsQuery.message = { $regex: cleanSearchValue, $options: "i" };
+    }
+
     // Điều kiện xác định quyền truy cập của người dùng
     if (
       user.role === "Admin" ||
@@ -60,10 +69,6 @@ exports.getAllTickets = async (req, res) => {
     ) {
     } else {
       ticketsQuery.createdBy = user.id;
-    }
-
-    if (search_value) {
-      ticketsQuery.$text = { $search: search_value };
     }
 
     // Bộ lọc theo form_date và to_date (ngày tháng)

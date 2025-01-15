@@ -370,7 +370,7 @@ exports.registerService = async (req, res) => {
       createdUserId,
     });
     const savedService = await newService.save(); // đợi kết quả trả về từ cơ sở dữ liệu và lưu vào savedService
-
+    // console.log("Chứa thông tin quản lý của tài khoản này", savedService);
     // Tạo hồ sơ mới
     // phải thêm serviceId vào newProfile
     const newProfile = new Profile({
@@ -567,28 +567,40 @@ exports.updateProfileInfo = async (req, res) => {
 
 // Lấy danh sách dịch vụ
 // Nhân viên xem được các dịch vụ mình chịu trách nhiệm
-// User xem được dịch vụ mình đăng ký
+// Nhân viên và cộng tác viên xem được dịch vụ mình đăng ký
 // Manager và Admin xem được hết
-exports.getServiceList = async (req, res) => {
+
+// Thêm search vào getProfileList
+exports.getProfileList = async (req, res) => {
   const userId = req.user.id;
+  const userRole = req.user.role;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
-
   try {
-    // Truy vấn danh sách dịch vụ mà userId đã đăng ký với phân trang
-    const listRegisteredServices = await RegisteredService.find({
-      createdUserId: userId,
-    });
+    let filter = {};
+    let registeredServiceIds = [];
 
-    // Lấy danh sách _id của tất cả tài liệu
-    const registeredServiceIds = listRegisteredServices.map(
-      (service) => service._id
-    );
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        managerUserId: userId,
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
 
-    const listProfile = await Profile.find({
-      registeredService: { $in: registeredServiceIds },
-    })
+      filter = { registeredService: { $in: managedServiceIds } };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = { registeredService: { $in: registeredServiceIds } };
+    }
+
+    const listProfile = await Profile.find(filter)
       .populate([
         {
           path: "registeredService",
@@ -606,9 +618,7 @@ exports.getServiceList = async (req, res) => {
       .limit(limit);
 
     // Lấy tổng số dịch vụ để tính tổng số trang
-    const totalProfiles = await Profile.countDocuments({
-      registeredService: { $in: registeredServiceIds },
-    });
+    const totalProfiles = await Profile.countDocuments(filter);
 
     // Tính tổng số trang
     const totalPages = Math.ceil(totalProfiles / limit);
@@ -670,19 +680,9 @@ exports.getProfileDetails = async (req, res) => {
         populate: { path: "role", select: "name" },
       })
       .populate({
-        path: "avatar", // Populate thông tin avatar
-        select: "url", // Lấy chỉ trường url của avatar
+        path: "avatar",
+        select: "url",
       });
-
-    // Dịch vụ đăng ký bởi người dùng
-
-    console.log("danh sách Ticket", ticketCustomer);
-    // Kiểm tra nếu không tìm thấy Profile hoặc RegisteredService
-    if (!profile || !profile.registeredService) {
-      return res
-        .status(404)
-        .json({ message: "Không tìm thấy hồ sơ của người dùng!" });
-    }
 
     // Trả về thông tin chi tiết Profile và dịch vụ
     return res.status(200).json({
@@ -690,7 +690,6 @@ exports.getProfileDetails = async (req, res) => {
       data: {
         profile: profile,
         createdByInfo: infoCustomer,
-        ticket: ticketCustomer,
       },
     });
   } catch (error) {

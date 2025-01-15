@@ -26,7 +26,7 @@ router.put(
 
 // Lấy danh sách dịch vụ (cần đăng nhập)
 // Chức năng xem full Danh sách Hồ sơ đăng ký
-router.get("/list", authenticateToken, serviceController.getServiceList);
+router.get("/list", authenticateToken, serviceController.getProfileList);
 
 // Chi tiết Hồ sơ (cần đăng nhập)
 router.get(
