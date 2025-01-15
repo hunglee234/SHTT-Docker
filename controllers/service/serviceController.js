@@ -436,12 +436,39 @@ exports.registerService = async (req, res) => {
 
 // Update 09/01/2025 updateProfile Info
 exports.updateProfileInfo = async (req, res) => {
+  const { profileId } = req.params;
+  const userId = req.user.id;
+  const userRole = req.user.role;
   try {
-    const { profileId } = req.params;
-    const userId = req.user.id;
+    let filter = { _id: profileId };
+    let registeredServiceIds = [];
 
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        managerUserId: userId,
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      filter = {
+        ...filter,
+        registeredService: { $in: managedServiceIds },
+      };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = {
+        ...filter,
+        registeredService: { $in: registeredServiceIds },
+      };
+    }
     // Tìm hồ sơ theo profileId
-    const profile = await Profile.findById(profileId).populate("record");
+    const profile = await Profile.findOne(filter);
 
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
@@ -475,7 +502,6 @@ exports.updateProfileInfo = async (req, res) => {
           (field) => field.name === newField.name
         );
         // Kiểm tra chi tiết giá trị mới
-        console.log("Kiểm tra chi tiết giá trị mới", newField.value);
         if (!oldField || oldField.value === newField.value) return;
 
         // Ghi nhận thay đổi
@@ -496,10 +522,7 @@ exports.updateProfileInfo = async (req, res) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
           const file = galleryFiles[index];
           if (file) {
-            console.log(file);
             newField.value = file.location;
-            console.log("file.location", file.location);
-            console.log("newField.value", newField.value);
           }
         }
       });
@@ -546,10 +569,28 @@ exports.updateProfileInfo = async (req, res) => {
     // Lưu hồ sơ đã cập nhật
     await profile.save();
 
-    const fullProFileWithImage = await Profile.findById(profile._id).populate({
-      path: "image",
-      select: "url",
-    });
+    const fullProFileWithImage = await Profile.findById(profile._id).populate([
+      {
+        path: "registeredService",
+        populate: {
+          path: "serviceId",
+          select: "serviceName description",
+          populate: { path: "category", select: "categoryName" },
+        },
+      },
+      {
+        path: "processes",
+        select: "processContent completionDate pdfUrl status",
+      },
+      {
+        path: "image",
+        select: "url",
+      },
+      {
+        path: "createdBy updatedBy",
+        select: "fullName",
+      },
+    ]);
 
     // Trả về phản hồi
     res.status(200).json({
@@ -645,12 +686,41 @@ exports.getProfileList = async (req, res) => {
 exports.getProfileDetails = async (req, res) => {
   const { profileId } = req.params;
   const userId = req.user.id;
+  const userRole = req.user.role;
+
   try {
+    let filter = { _id: profileId };
+    let registeredServiceIds = [];
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        managerUserId: userId,
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      filter = {
+        ...filter,
+        registeredService: { $in: managedServiceIds },
+      };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = {
+        ...filter,
+        registeredService: { $in: registeredServiceIds },
+      };
+    }
+
     // Tìm Profile theo profileId và lọc các dịch vụ của userId trong registeredService
-    const profile = await Profile.findOne({ _id: profileId }).populate([
+    const profile = await Profile.findOne(filter).populate([
       {
         path: "registeredService",
-        match: { createdUserId: userId },
         populate: {
           path: "serviceId",
           select: "serviceName description",
@@ -706,38 +776,62 @@ exports.getProfileDetails = async (req, res) => {
 // Xóa dịch vụ
 exports.deleteProfile = async (req, res) => {
   const userId = req.user.id;
+  const userRole = req.user.role;
+  const { profileId } = req.params || { profileId: null };
+
+  console.log(req.params);
   try {
-    const registeredServices = await RegisteredService.find({
-      createdUserId: userId,
-    }).populate([
-      {
-        path: "serviceId",
-        select: "serviceName description",
-      },
-      {
-        path: "profileId",
-      },
-    ]);
+    let registeredServiceIds = [];
+
+    if (userRole === "Admin") {
+      const profile = await Profile.findById(profileId);
+
+      registeredServiceIds = profile.registeredService;
+      const CustomerServices = await RegisteredService.find({
+        _id: { $in: registeredServiceIds }, // Dùng toán tử $in để tìm các dịch vụ có _id trong mảng registeredService
+      });
+
+      registeredServiceIds = CustomerServices.map((service) => service._id);
+    }
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        managerUserId: userId,
+      });
+      registeredServiceIds = managedServices.map((service) => service._id);
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+    }
 
     // Lấy danh sách profileId từ các dịch vụ đã đăng ký
-    const profileIds = registeredServices.map(
-      (service) => service?.profileId?._id
-    );
+    if (!registeredServiceIds.length) {
+      return res.status(404).json({
+        message: "Không có dịch vụ hoặc hồ sơ nào để xóa.",
+      });
+    }
 
-    console.log("Danh sách Profile cần xóa:", profileIds);
+    // Xóa các dịch vụ đã đăng ký
+    const deleteRegisteredServices = RegisteredService.deleteMany({
+      _id: { $in: registeredServiceIds },
+    });
 
-    // Xóa các dịch vụ đã đăng ký liên quan đến userId
-    await RegisteredService.deleteMany({ createdUserId: userId });
+    // Xóa các hồ sơ liên quan đến các dịch vụ đã đăng ký
+    const deleteProfiles = Profile.deleteMany({
+      registeredService: { $in: registeredServiceIds },
+    });
 
-    // Xóa các hồ sơ liên quan
-    await Profile.deleteMany({ _id: { $in: profileIds } });
-
-    console.log("Hồ sơ và dịch vụ đã được xóa thành công.");
+    // Thực hiện cả hai thao tác xóa đồng thời
+    await Promise.all([deleteRegisteredServices, deleteProfiles]);
 
     // Phản hồi thành công
     return res.status(200).json({
-      message:
-        "Hồ sơ và các dịch vụ đã đăng ký của bạn đã được xóa thành công.",
+      message: "Hồ sơ và các dịch vụ đã đăng ký đã được xóa thành công.",
     });
   } catch (error) {
     console.error(error);

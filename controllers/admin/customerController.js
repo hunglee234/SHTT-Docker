@@ -349,7 +349,9 @@ exports.updateCustomer = async (req, res) => {
     }
 
     // Tìm thông tin khách hàng cần cập nhật
-    const staffAccount = await StaffAccount.findById(id).populate("account");
+    const staffAccount = await StaffAccount.findOne({
+      account: account._id,
+    }).populate("account");
 
     if (!staffAccount) {
       return res.status(404).json({ error: "khách hàng không tồn tại." });
