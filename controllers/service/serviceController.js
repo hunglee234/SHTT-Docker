@@ -2,6 +2,7 @@ const Service = require("../../models/Service/Service");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const CategoryService = require("../../models/Service/CategoryService");
+const Ticket = require("../../models/Ticket/Ticket");
 const User = require("../../models/User/User");
 const RegisteredService = require("../../models/Service/RegisteredService");
 const InfoUser = require("../../models/User/InfoUser");
@@ -9,6 +10,7 @@ const Record = require("../../models/Service/Record");
 const mongoose = require("mongoose");
 const Profile = require("../../models/Service/Profile");
 const { saveFile } = require("../../utils/saveFile");
+const { populate } = require("../../models/Role");
 
 // CREATE
 exports.createService = async (req, res) => {
@@ -366,7 +368,6 @@ exports.registerService = async (req, res) => {
       serviceId: service._id,
       managerUserId: managerInfo?.createdByManager || null,
       createdUserId,
-      createdAt: new Date(),
     });
     const savedService = await newService.save(); // đợi kết quả trả về từ cơ sở dữ liệu và lưu vào savedService
 
@@ -378,7 +379,6 @@ exports.registerService = async (req, res) => {
       info: responseObject.info,
       createdBy: createdUserId,
       image: imageId || null,
-      createdAt: new Date(),
     });
     const savedProfile = await newProfile.save();
 
@@ -597,6 +597,10 @@ exports.getServiceList = async (req, res) => {
             select: "serviceName description",
           },
         },
+        {
+          path: "image",
+          select: "url",
+        },
       ])
       .skip(skip)
       .limit(limit);
@@ -631,7 +635,6 @@ exports.getServiceList = async (req, res) => {
 exports.getProfileDetails = async (req, res) => {
   const { profileId } = req.params;
   const userId = req.user.id;
-  console.log(profileId);
   try {
     // Tìm Profile theo profileId và lọc các dịch vụ của userId trong registeredService
     const profile = await Profile.findOne({ _id: profileId }).populate([
@@ -641,6 +644,7 @@ exports.getProfileDetails = async (req, res) => {
         populate: {
           path: "serviceId",
           select: "serviceName description",
+          populate: { path: "category", select: "categoryName" },
         },
       },
       {
@@ -670,6 +674,9 @@ exports.getProfileDetails = async (req, res) => {
         select: "url", // Lấy chỉ trường url của avatar
       });
 
+    // Dịch vụ đăng ký bởi người dùng
+
+    console.log("danh sách Ticket", ticketCustomer);
     // Kiểm tra nếu không tìm thấy Profile hoặc RegisteredService
     if (!profile || !profile.registeredService) {
       return res
@@ -683,6 +690,7 @@ exports.getProfileDetails = async (req, res) => {
       data: {
         profile: profile,
         createdByInfo: infoCustomer,
+        ticket: ticketCustomer,
       },
     });
   } catch (error) {
@@ -770,6 +778,53 @@ exports.getEditHistory = async (req, res) => {
     res.status(500).json({
       message: "Đã xảy ra lỗi khi lấy lịch sử chỉnh sửa",
       error: error.message,
+    });
+  }
+};
+
+exports.getServiceByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    let serviceQuery = {
+      createdUserId: userId,
+    };
+
+    const skip = (page - 1) * limit;
+
+    const registeredServices = await RegisteredService.find(serviceQuery)
+      .populate([
+        {
+          path: "serviceId",
+          select: "serviceName description",
+          populate: { path: "category", select: "categoryName" },
+        },
+      ])
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    if (!registeredServices) {
+      return res.status(404).json({
+        message: "Không tìm thấy dịch vụ của người dùng",
+      });
+    }
+
+    const totalServices = await RegisteredService.countDocuments(serviceQuery);
+    const totalPages = Math.ceil(totalServices / limit);
+
+    return res.status(200).json({
+      message: "Dịch vụ của người dùng :",
+      data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalServices: totalServices,
+        registeredServices: registeredServices,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Có lỗi xảy ra, vui lòng thử lại sau!",
     });
   }
 };

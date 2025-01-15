@@ -40,7 +40,13 @@ exports.createTicket = async (req, res) => {
 exports.getAllTickets = async (req, res) => {
   try {
     const user = req.user;
-    const { search_value, from_date, to_date } = req.query;
+    const {
+      search_value,
+      from_date,
+      to_date,
+      page = 1,
+      limit = 10,
+    } = req.query;
 
     // Khởi tạo query để tìm kiếm
     let ticketsQuery = {};
@@ -76,10 +82,24 @@ exports.getAllTickets = async (req, res) => {
     // console.log("Date Query:", ticketsQuery.createdAt);
 
     // Lấy tickets từ cơ sở dữ liệu theo query đã xây dựng
-    const tickets = await Ticket.find(ticketsQuery);
+    const skip = (page - 1) * limit;
+    const tickets = await Ticket.find(ticketsQuery)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalTickets = await Ticket.countDocuments(ticketsQuery);
+    const totalPages = Math.ceil(totalTickets / limit);
 
     // Trả về kết quả
-    res.status(200).json(tickets);
+    res.status(200).json({
+      message: "Danh sách ticket",
+      data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalTickets: totalTickets,
+        tickets: tickets,
+      },
+    });
   } catch (error) {
     console.error("Error fetching tickets:", error);
     res.status(500).json({ error: "Failed to fetch tickets." });
@@ -109,6 +129,47 @@ exports.getTicketById = async (req, res) => {
   } catch (error) {
     console.error("Error fetching ticket:", error);
     res.status(500).json({ error: "Failed to fetch ticket." });
+  }
+};
+
+// Xem danh sách Ticket by UserId
+exports.getTicketByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    let ticketQuery = {
+      createdBy: userId,
+    };
+
+    const skip = (page - 1) * limit;
+    const ticketCustomer = await Ticket.find(ticketQuery)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    if (!ticketCustomer) {
+      return res.status(404).json({
+        message: "Không tìm thấy vé cho người dùng này.",
+      });
+    }
+
+    const totalTickets = await Ticket.countDocuments(ticketQuery);
+    const totalPages = Math.ceil(totalTickets / limit);
+
+    return res.status(200).json({
+      message: "Ticket By UserId :",
+      data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalTickets: totalTickets,
+        ticketCustomer: ticketCustomer,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    // Xử lý lỗi nếu có
+    return res.status(500).json({
+      message: "Có lỗi xảy ra, vui lòng thử lại sau!",
+    });
   }
 };
 

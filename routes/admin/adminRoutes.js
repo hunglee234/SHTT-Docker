@@ -7,12 +7,15 @@ const proceduresRoutes = require("../../routes/procedures/proceduresRoutes");
 const customersRoutes = require("../../routes/admin/customers/customersRoutes");
 const accountRoutes = require("../../routes/admin/account/accountRoutes");
 const customerRoutes = require("../../routes/admin/customer/customerRoutes");
+const ticketRoutes = require("../../routes/admin/ticket/ticketRoutes");
 
 router.use("/category", categoryRoutes);
 
 router.use("/service", serviceRoutes);
 
 router.use("/profile", profieRoutes);
+
+router.use("/ticket", ticketRoutes);
 
 router.use("/procedure", proceduresRoutes);
 
