@@ -1,5 +1,5 @@
 const express = require("express");
-const  router = express.Router();
+const router = express.Router();
 const ticketRoutes = require("../../routes/user/ticket/ticket");
 const infoAccount = require("../../controllers/info/infoAccount");
 const categoryRoutes = require("../../routes/user/category/categoryRoutes");
@@ -22,5 +22,7 @@ router.get("/me", infoAccount.getMe);
 router.put("/me", upload.single("avatar"), infoAccount.updateMe);
 
 router.use("/", regisService);
+
+// router.use("")
 
 module.exports = router;
