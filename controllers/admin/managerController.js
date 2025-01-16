@@ -82,29 +82,12 @@ exports.createStaff = async (req, res) => {
       },
     });
 
-    let collaboratorCount = 0;
-    let staffCount = 0;
+    const totalAccounts = staffAccounts.length;
 
-    staffAccounts.forEach((staffAccount) => {
-      const roleName = staffAccount.account?.role?.name; // Truy cập role.name
-      if (roleName === "Collaborator") {
-        collaboratorCount++;
-      }
-      if (roleName === "Staff") {
-        staffCount++;
-      }
-    });
-
-    if (roleExists.name === "Staff" && staffCount >= 2) {
-      return res
-        .status(400)
-        .json({ error: "Bạn chỉ được tạo tối đa 2 Nhân viên." });
-    }
-
-    if (roleExists.name === "Collaborator" && collaboratorCount >= 1) {
-      return res
-        .status(400)
-        .json({ error: "Bạn chỉ được tạo tối đa 1 Cộng tác viên." });
+    if (totalAccounts >= 3) {
+      return res.status(400).json({
+        error: "Bạn chỉ được tạo tối đa 3 tài khoản.",
+      });
     }
 
     // Mã hóa mật khẩu

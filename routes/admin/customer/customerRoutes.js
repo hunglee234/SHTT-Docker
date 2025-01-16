@@ -5,7 +5,6 @@ const upload = require("../../../utils/multer");
 
 const {
   createCustomer,
-  getFullCustomerList,
   getStaffCustomerId,
   updateCustomer,
   deleteCustomer,
@@ -22,7 +21,5 @@ router.put("/:id", upload.single("avatar"), updateCustomer);
 
 // Xóa tài khoản nhân viên
 router.delete("/:id", deleteCustomer);
-
-
 
 module.exports = router;

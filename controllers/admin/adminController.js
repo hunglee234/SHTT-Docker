@@ -140,7 +140,9 @@ exports.createAccount = async (req, res) => {
 // Lấy danh sách tài khoản admin và có phân trang và tìm kiếm
 exports.getFullAccountList = async (req, res) => {
   try {
-    // Tìm các tài khoản có vai trò Admin
+    const { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
+
     const staffAccounts = await StaffAccount.find().populate({
       path: "account",
       select: "fullName email username avatar role",
@@ -150,24 +152,32 @@ exports.getFullAccountList = async (req, res) => {
     // console.log(staffAccounts);
 
     // Lọc ra các tài khoản có vai trò "Admin"
+
     const filteredAccounts = staffAccounts.filter(
       (staffAccount) =>
         staffAccount.account?.role &&
         staffAccount.account?.role.name === "Admin"
     );
 
-    // console.log(filteredAccounts);
+    const paginatedAccounts = filteredAccounts.slice(
+      skip,
+      skip + parseInt(limit)
+    );
 
-    if (filteredAccounts.length === 0) {
+    if (paginatedAccounts.length === 0) {
       return res
         .status(404)
         .json({ message: "Không có tài khoản Admin nào được tìm thấy." });
     }
 
+    const totalAccounts = filteredAccounts.length;
+    const totalPages = Math.ceil(totalAccounts / limit);
+
     res.status(200).json({
       message: "Danh sách tài khoản Admin.",
-      total: filteredAccounts.length,
-      data: filteredAccounts,
+      totalAccounts: filteredAccounts.length,
+      totalPages: totalPages,
+      data: paginatedAccounts,
     });
   } catch (error) {
     if (error.name === "CastError") {
