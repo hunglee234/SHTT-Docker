@@ -7,6 +7,8 @@ const serviceRoutes = require("../../routes/user/service/serviceRoutes");
 const upload = require("../../utils/multer");
 const regisService = require("../../routes/sevice/serviceRouter");
 const proceduresRoutes = require("../../routes/procedures/proceduresRoutes");
+const notiRoutes = require("../../routes/noti/notiRoutes");
+
 router.use("/category", categoryRoutes);
 
 router.use("/service", serviceRoutes);
@@ -15,6 +17,7 @@ router.use("/ticket", ticketRoutes);
 
 router.use("/procedure", proceduresRoutes);
 
+router.use("/noti", notiRoutes);
 // Lấy thông tin tài khoản
 router.get("/me", infoAccount.getMe);
 

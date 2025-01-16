@@ -2,6 +2,7 @@ const Service = require("../../models/Service/Service");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const CategoryService = require("../../models/Service/CategoryService");
+const Noti = require("../../models/Noti");
 const Ticket = require("../../models/Ticket/Ticket");
 const User = require("../../models/User/User");
 const RegisteredService = require("../../models/Service/RegisteredService");
@@ -467,6 +468,7 @@ exports.updateProfileInfo = async (req, res) => {
         registeredService: { $in: registeredServiceIds },
       };
     }
+
     // Tìm hồ sơ theo profileId
     const profile = await Profile.findOne(filter);
 
@@ -592,10 +594,17 @@ exports.updateProfileInfo = async (req, res) => {
       },
     ]);
 
+    const newNoti = await Noti.create({
+      profileId,
+      message: `Hồ sơ ${profileId} đã được cập nhật thông tin mới.`,
+      status: "New",
+      createdAt: new Date(),
+    });
+
     // Trả về phản hồi
     res.status(200).json({
-      message: "Cập nhật thành công",
-      updatedProfile: fullProFileWithImage,
+      message: "Cập nhật hồ sơ thành công",
+      data: { updatedProfile: fullProFileWithImage, notification: newNoti },
     });
   } catch (error) {
     console.error(error);
