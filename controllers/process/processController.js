@@ -1,5 +1,6 @@
 const Process = require("../../models/Process");
 const Profile = require("../../models/Service/Profile");
+const Noti = require("../../models/Noti");
 
 exports.createProcess = async (req, res) => {
   const { profileId } = req.params;
@@ -16,13 +17,24 @@ exports.createProcess = async (req, res) => {
     });
 
     // Cập nhật Profile để thêm tiến trình vào danh sách
-    await Profile.findByIdAndUpdate(profileId, {
-      $push: { processes: newProcess._id },
+    await Profile.findByIdAndUpdate(
+      profileId,
+      {
+        $push: { processes: newProcess._id },
+      },
+      { new: true }
+    );
+
+    const newNoti = await Noti.create({
+      profileId,
+      message: `Tiến trình hồ sơ ${profileId} đã được cập nhật trạng thái thành: ${status}. `,
+      status: "New",
+      createdAt: new Date(),
     });
 
     return res.status(201).json({
       message: "Tiến trình được tạo thành công",
-      data: newProcess,
+      data: { process: newProcess, notification: newNoti },
     });
   } catch (error) {
     console.error("Lỗi khi tạo tiến trình:", error.message);
