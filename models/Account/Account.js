@@ -34,6 +34,12 @@ const accountSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    provider: {
+      type: String,
+      required: false,
+      enum: ["local", "facebook", "google", null],
+      default: null,
+    },
   },
   {
     timestamps: true,

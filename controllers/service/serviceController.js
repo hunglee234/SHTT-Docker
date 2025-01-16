@@ -119,6 +119,7 @@ exports.getAllServices = async (req, res) => {
         select: "fullName",
       })
       .exec();
+
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
@@ -793,7 +794,6 @@ exports.deleteProfile = async (req, res) => {
   const userRole = req.user.role;
   const { profileId } = req.params || { profileId: null };
 
-  console.log(req.params);
   try {
     let registeredServiceIds = [];
 

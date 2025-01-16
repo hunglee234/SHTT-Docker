@@ -9,7 +9,6 @@ const generateAutoCode = require("../../utils/autoIncrement");
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-  // console.log(req.body);
   try {
     user = await User.findOne({ email }).populate("role");
     if (user) {
@@ -31,7 +30,7 @@ exports.login = async (req, res) => {
 
     // Kiểm tra mật khẩu
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
+    console.log("b", isPasswordValid);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -104,14 +103,6 @@ exports.register = async (req, res) => {
 
     // Lưu người dùng vào cơ sở dữ liệu
     const savedAccount = await newAccount.save();
-
-    const staffcodeAuto = await generateAutoCode("staffCode", "KH", 2);
-    // Tạo InfoAccount
-    const newInfoStaff = new StaffAccount({
-      account: savedAccount._id,
-      staffCode: staffcodeAuto,
-    });
-    const savedInfoStaff = await newInfoStaff.save();
 
     // Phản hồi thành công
     res.status(201).json({
