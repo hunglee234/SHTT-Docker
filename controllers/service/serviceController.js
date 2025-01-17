@@ -119,6 +119,7 @@ exports.getAllServices = async (req, res) => {
         select: "fullName",
       })
       .exec();
+
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
@@ -637,7 +638,13 @@ exports.getProfileList = async (req, res) => {
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
-      filter = { registeredService: { $in: managedServiceIds } };
+      // Lọc các hồ sơ mà manager quản lý hoặc họ tạo
+      filter = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
     } else if (userRole === "Staff" || userRole === "Collaborator") {
       const listRegisteredServices = await RegisteredService.find({
         createdUserId: userId,
@@ -666,7 +673,6 @@ exports.getProfileList = async (req, res) => {
       ])
       .skip(skip)
       .limit(limit);
-
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(filter);
 
@@ -788,7 +794,6 @@ exports.deleteProfile = async (req, res) => {
   const userRole = req.user.role;
   const { profileId } = req.params || { profileId: null };
 
-  console.log(req.params);
   try {
     let registeredServiceIds = [];
 

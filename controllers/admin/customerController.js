@@ -119,7 +119,6 @@ exports.createCustomer = async (req, res) => {
       select: "url",
     });
 
-    console.log(accountWithAvatar);
     const avatarUrl = accountWithAvatar.avatar?.url || null;
 
     // Dữ liệu trả về
@@ -350,9 +349,10 @@ exports.updateCustomer = async (req, res) => {
 
     // Tìm thông tin khách hàng cần cập nhật
     const staffAccount = await StaffAccount.findOne({
-      account: account._id,
+      account: id,
     }).populate("account");
 
+    console.log("Thông tin khách hàng", staffAccount);
     if (!staffAccount) {
       return res.status(404).json({ error: "khách hàng không tồn tại." });
     }
