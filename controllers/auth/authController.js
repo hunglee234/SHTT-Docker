@@ -104,6 +104,12 @@ exports.register = async (req, res) => {
     // Lưu người dùng vào cơ sở dữ liệu
     const savedAccount = await newAccount.save();
 
+    const newInfoAccount = new StaffAccount({
+      account: savedAccount._id,
+    });
+
+    const savedInfoStaff = await newInfoAccount.save();
+
     // Phản hồi thành công
     res.status(201).json({
       message: "Khách hàng đăng ký thành công",
