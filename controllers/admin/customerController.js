@@ -56,13 +56,23 @@ exports.createCustomer = async (req, res) => {
       return res.status(404).json({ error: "Role không tồn tại." });
     }
 
+    // Kiểm tra xem số điện thoại đã tồn tại chưa
+    const existingPhone = await StaffAccount.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
+    }
+
+    const existingTaxcode = await StaffAccount.findOne({ MST });
+    if (existingTaxcode) {
+      return res.status(400).json({ message: "MST already exists" });
+    }
+
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
         message: "Email đã tồn tại!",
       });
     }
-
     // Kiểm tra username có tồn tại không
     const existingUsername = await Account.findOne({ username });
     if (existingUsername) {
@@ -364,6 +374,16 @@ exports.updateCustomer = async (req, res) => {
         return res.status(404).json({ error: "Role không tồn tại." });
       }
       staffAccount.account.role = roleExists._id; // Cập nhật vai trò của nhân viên
+    }
+
+    const existingPhone = await StaffAccount.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
+    }
+
+    const existingTaxcode = await StaffAccount.findOne({ MST });
+    if (existingTaxcode) {
+      return res.status(400).json({ message: "MST already exists" });
     }
 
     const existingEmail = await Account.findOne({ email });
