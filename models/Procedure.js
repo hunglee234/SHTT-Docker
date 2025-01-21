@@ -6,7 +6,7 @@ const ProcedureSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    pdfUrl: {
+    content: {
       type: String,
       required: false,
     },

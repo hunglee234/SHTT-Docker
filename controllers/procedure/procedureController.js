@@ -4,11 +4,10 @@ const Procedure = require("../../models/Procedure");
 exports.createProcedure = async (req, res) => {
   try {
     const nameProce = req.body.name || [];
-    const pdfFile = req.file || {};
-    const pdfId = pdfFile.location;
+    const content = req.body.content || "";
     const procedure = await Procedure.create({
       name: nameProce,
-      pdfUrl: pdfId,
+      content: content,
     });
     res
       .status(201)
@@ -24,8 +23,7 @@ exports.createProcedure = async (req, res) => {
 exports.updateProcedure = async (req, res) => {
   const { procedureId } = req.params;
   const nameProce = req.body.name;
-  const pdfFile = req.file || {};
-  const pdfId = pdfFile.location || null;
+  const content = req.body.content || "";
   try {
     const currentProcedure = await Procedure.findById(procedureId);
     if (!currentProcedure) {
@@ -34,7 +32,7 @@ exports.updateProcedure = async (req, res) => {
 
     const updatedData = {
       name: nameProce || currentProcedure.name,
-      pdfUrl: pdfId || currentProcedure.pdfUrl,
+      content: content || currentProcedure.content,
     };
 
     const procedure = await Procedure.findByIdAndUpdate(
@@ -42,7 +40,6 @@ exports.updateProcedure = async (req, res) => {
       updatedData,
       { new: true }
     );
-
     res
       .status(200)
       .json({ message: "Thủ tục được cập nhật thành công!", data: procedure });
@@ -87,7 +84,8 @@ exports.getAllProcedures = async (req, res) => {
     const skip = (page - 1) * limit;
     const procedures = await Procedure.find(procedureQuery)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .select("name");
 
     const totalProcedures = await Procedure.countDocuments(procedureQuery);
     const totalPages = Math.ceil(totalProcedures / limit);
