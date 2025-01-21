@@ -21,12 +21,12 @@ router.delete(
 // Tạo hồ sơ cho khách luôn
 
 router.post(
-  "/:formName",
+  "/:userId/:formName",
   upload.fields([
     { name: "gallery", maxCount: 3 },
     { name: "image", maxCount: 1 },
   ]),
-  serviceController.registerService
+  serviceController.registerServicebyAdmin
 );
 
 router.put(
