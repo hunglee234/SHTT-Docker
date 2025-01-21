@@ -9,7 +9,7 @@ const accountSchema = new mongoose.Schema(
     fullName: { type: String, default: "" },
     email: {
       type: String,
-      required: true,
+      required: false,
       unique: true,
     },
     password: {
@@ -39,6 +39,12 @@ const accountSchema = new mongoose.Schema(
       required: false,
       enum: ["local", "facebook", "google", null],
       default: null,
+    },
+    typeaccount: {
+      type: String,
+      required: true,
+      enum: ["individual", "company"],
+      default: "individual",
     },
   },
   {

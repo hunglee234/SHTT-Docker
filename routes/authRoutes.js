@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {
+  login2,
   register,
   login,
   logout,
@@ -10,7 +11,7 @@ const {
 router.post("/register", register);
 
 // Đăng nhập
-router.post("/login", login);
+router.post("/login", login2);
 
 // Đăng xuất
 router.post("/logout", logout);

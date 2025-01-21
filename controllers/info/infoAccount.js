@@ -84,6 +84,12 @@ exports.updateMe = async (req, res) => {
       avatarId = await saveAvatar(avatarUrl);
     }
 
+    // Kiểm tra xem số điện thoại đã tồn tại chưa
+    const existingPhone = await StaffAccount.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
+    }
+
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
