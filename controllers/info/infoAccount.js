@@ -90,11 +90,6 @@ exports.updateMe = async (req, res) => {
       return res.status(400).json({ message: "Phone number already exists" });
     }
 
-    const existingTaxcode = await StaffAccount.findOne({ MST });
-    if (existingTaxcode) {
-      return res.status(400).json({ message: "MST already exists" });
-    }
-
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({

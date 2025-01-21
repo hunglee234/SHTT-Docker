@@ -562,7 +562,14 @@ exports.registerService = async (req, res) => {
 
 exports.updateGeneralProfileByAdmin = async (req, res) => {
   const { profileId } = req.params;
-  const { profileCode, numberOfCertificates, dateActive, status } = req.body;
+  const {
+    profileCode,
+    numberOfCertificates,
+    dateActive,
+    status,
+    issueDate,
+    expiryDate,
+  } = req.body;
   try {
     const profile = await Profile.findOne({ _id: profileId });
     if (!profile) {
@@ -591,6 +598,24 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       const formattedDate = moment(dateActive, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("dateActive", formattedDate.startOf("day").toDate());
+      } else {
+        return res.status(400).json({ message: "Ngày không hợp lệ!" });
+      }
+    }
+
+    if (issueDate) {
+      const formattedDate = moment(issueDate, "DD/MM/YYYY", true);
+      if (formattedDate.isValid()) {
+        updateField("issueDate", formattedDate.startOf("day").toDate());
+      } else {
+        return res.status(400).json({ message: "Ngày không hợp lệ!" });
+      }
+    }
+
+    if (expiryDate) {
+      const formattedDate = moment(expiryDate, "DD/MM/YYYY", true);
+      if (formattedDate.isValid()) {
+        updateField("expiryDate", formattedDate.startOf("day").toDate());
       } else {
         return res.status(400).json({ message: "Ngày không hợp lệ!" });
       }
@@ -995,6 +1020,13 @@ exports.deleteProfile = async (req, res) => {
   const { profileId } = req.params || { profileId: null };
 
   try {
+    // Kiểm tra quyền truy cập: chỉ Admin hoặc Manager được phép xóa
+    if (!["Admin", "Manager"].includes(userRole)) {
+      return res.status(403).json({
+        message: "Bạn không có quyền xóa hồ sơ.",
+      });
+    }
+
     let filter = { _id: profileId };
     let registeredServiceIds = [];
 
@@ -1026,18 +1058,6 @@ exports.deleteProfile = async (req, res) => {
           { createdBy: userId },
         ],
       };
-    } else if (userRole === "Staff" || userRole === "Collaborator") {
-      const listRegisteredServices = await RegisteredService.find({
-        createdUserId: userId,
-      });
-
-      registeredServiceIds = listRegisteredServices.map(
-        (service) => service._id
-      );
-      filter = {
-        ...filter,
-        registeredService: { $in: registeredServiceIds },
-      };
     }
 
     // Kiểm tra nếu không có dịch vụ nào liên quan
@@ -1056,9 +1076,9 @@ exports.deleteProfile = async (req, res) => {
       });
     }
 
-    // Kiểm tra trạng thái của hồ sơ (áp dụng cho Manager, Staff, Collaborator)
+    // Kiểm tra trạng thái của hồ sơ (áp dụng cho Manager )
     if (
-      ["Manager", "Staff", "Collaborator"].includes(userRole) &&
+      ["Manager"].includes(userRole) &&
       profilesToDelete.some((profile) => profile.status !== "Chờ duyệt")
     ) {
       return res.status(400).json({

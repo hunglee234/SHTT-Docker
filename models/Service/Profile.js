@@ -30,6 +30,14 @@ const profileSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    issueDate: {
+      type: Date,
+      default: Date.now,
+    },
+    expiryDate: {
+      type: Date,
+      default: Date.now,
+    },
     info: { type: [infoSchema], required: true },
     registeredService: {
       type: mongoose.Schema.Types.ObjectId,

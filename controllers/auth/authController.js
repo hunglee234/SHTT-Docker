@@ -119,12 +119,23 @@ exports.login2 = async (req, res) => {
     account.token = token;
     await account.save();
 
+    const accountWithAvatar = await StaffAccount.findOne({
+      account: account._id,
+    }).populate({
+      path: "avatar",
+      select: "url",
+    });
+
+    // console.log(accountWithAvatar);
+    const avatarUrl = accountWithAvatar.avatar?.url || null;
     // Trả về token và thông tin người dùng
     return res.json({
       message: "Login successful",
       token,
       account: {
         id: account._id,
+        avatar: avatarUrl,
+        username: account.username,
         identifier,
         role: roleAccount.role.name || roleAccount.role,
         phone: accountInfo.phone || null,

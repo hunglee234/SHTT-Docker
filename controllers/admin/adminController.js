@@ -48,7 +48,7 @@ exports.createAccount = async (req, res) => {
     if (!account.role || account.role.name !== "Admin") {
       return res
         .status(403)
-        .json({ error: "Bạn không có quyền tạo nhân viên." });
+        .json({ error: "Bạn không có quyền tạo tài khoản." });
     }
     // Check roleId
     const roleExists = await Role.findOne({ name: roleName });
