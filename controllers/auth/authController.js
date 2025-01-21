@@ -30,7 +30,6 @@ exports.login = async (req, res) => {
 
     // Kiểm tra mật khẩu
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log("b", isPasswordValid);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -113,8 +112,8 @@ exports.register = async (req, res) => {
     // Phản hồi thành công
     res.status(201).json({
       message: "Khách hàng đăng ký thành công",
-      account: savedAccount,
-      infoStaff: savedInfoStaff,
+      Account: savedAccount,
+      infoAccount: savedInfoStaff,
     });
   } catch (error) {
     console.error(error);

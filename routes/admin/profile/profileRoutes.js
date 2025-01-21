@@ -35,7 +35,7 @@ router.put(
     { name: "gallery", maxCount: 3 },
     { name: "image", maxCount: 1 },
   ]),
-  serviceController.updateProfileInfo
+  serviceController.updateProfileByAdmin
 );
 
 router.get("/list", serviceController.getProfileList);

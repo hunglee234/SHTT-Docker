@@ -40,6 +40,14 @@ exports.getNotiList = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit))
       .exec();
+
+    // Cập nhật trạng thái "read" cho các thông báo đã lấy
+    if (notiList.length > 0) {
+      await Noti.updateMany(
+        { _id: { $in: notiList.map((noti) => noti._id) } },
+        { $set: { status: "Read" } }
+      );
+    }
     const totalNoti = await Noti.countDocuments({
       profileId: { $in: profileIds },
     });

@@ -21,12 +21,21 @@ const profileSchema = new mongoose.Schema(
       default: () => new mongoose.Types.ObjectId(),
     },
     profileCode: { type: String, unique: true, default: "" },
+    numberOfCertificates: {
+      type: String,
+      unique: true,
+      default: "",
+    },
+    dateActive: {
+      type: Date,
+      default: Date.now,
+    },
+    info: { type: [infoSchema], required: true },
     registeredService: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "registeredService",
       required: true,
     },
-    info: { type: [infoSchema], required: true },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
@@ -59,8 +68,8 @@ const profileSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "under review"],
-      default: "pending",
+      enum: ["Chờ duyệt", "Đang triển khai", "Đã hoàn thành", "Tạm ngưng"],
+      default: "Chờ duyệt",
     },
     image: {
       type: mongoose.Schema.Types.ObjectId,
