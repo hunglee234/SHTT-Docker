@@ -72,49 +72,193 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.register = async (req, res) => {
-  const { fullName, email, password } = req.body;
+exports.login2 = async (req, res) => {
+  const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
   try {
-    // Kiểm tra xem email đã tồn tại trong cơ sở dữ liệu chưa
-    const existingAccount = await Account.findOne({ email });
-    if (existingAccount) {
-      return res.status(400).json({ message: "Email already exists" });
+    // Tìm MST hoặc SDT trong InfoAccount
+    if (/^(0[3|5|7|8|9])+([0-9]{8})$/.test(identifier)) {
+      accountInfo = await StaffAccount.findOne({ phone: identifier }).populate(
+        "account"
+      );
+    } else if (/^\d{10,13}$/.test(identifier)) {
+      // Nếu là MST (10-13 chữ số)
+      accountInfo = await StaffAccount.findOne({ MST: identifier }).populate(
+        "account"
+      );
     }
 
-    // Tìm vai trò mặc định "Manager"
-    const userAccount = await Role.findOne({ name: "Manager" });
-    if (!userAccount) {
+    // Kiểm tra nếu không tìm thấy tài khoản
+    if (!accountInfo || !accountInfo.account) {
       return res
-        .status(500)
-        .json({ message: "Default role 'Manager' not found" });
+        .status(404)
+        .json({ message: "Account not found. Please check your identifier." });
     }
 
-    // Mã hóa mật khẩu
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Truy cập vào bảng Account thông qua khóa ngoại
+    const account = accountInfo.account;
+    const roleAccount = await Account.findOne({ _id: account._id }).populate(
+      "role"
+    );
 
-    // Tạo người dùng mới với vai trò mặc định
-    const newAccount = new Account({
-      fullName,
-      email,
-      password: hashedPassword,
-      role: userAccount._id,
+    // Kiểm tra mật khẩu
+    const isPasswordValid = await bcrypt.compare(password, account.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // Tạo token JWT
+    const token = jwt.sign(
+      {
+        id: account._id,
+        role: roleAccount.role.name || roleAccount.role,
+      },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    account.token = token;
+    await account.save();
+
+    // Trả về token và thông tin người dùng
+    return res.json({
+      message: "Login successful",
+      token,
+      account: {
+        id: account._id,
+        identifier,
+        role: roleAccount.role.name || roleAccount.role,
+        phone: accountInfo.phone || null,
+        MST: accountInfo.MST || null,
+      },
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-    // Lưu người dùng vào cơ sở dữ liệu
-    const savedAccount = await newAccount.save();
+exports.register = async (req, res) => {
+  const { type } = req.body;
 
-    const newInfoAccount = new StaffAccount({
-      account: savedAccount._id,
-    });
+  try {
+    if (type === "individual") {
+      // Đăng ký tài khoản cá nhân
+      const { fullName, phoneNumber, email, password } = req.body;
 
-    const savedInfoStaff = await newInfoAccount.save();
+      // Kiểm tra các trường bắt buộc
+      if (!fullName || !phoneNumber || !email || !password) {
+        return res.status(400).json({
+          message:
+            "Full name, phone number, and password are required for individual registration",
+        });
+      }
 
-    // Phản hồi thành công
-    res.status(201).json({
-      message: "Khách hàng đăng ký thành công",
-      Account: savedAccount,
-      infoAccount: savedInfoStaff,
-    });
+      const existingEmail = await Account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      // Kiểm tra xem số điện thoại đã tồn tại chưa
+      const existingPhone = await StaffAccount.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Phone number already exists" });
+      }
+
+      // Tìm vai trò mặc định "Manager"
+      const roleAccount = await Role.findOne({ name: "Manager" });
+      if (!roleAccount) {
+        return res
+          .status(500)
+          .json({ message: "Default role 'Manager' not found" });
+      }
+
+      // Mã hóa mật khẩu
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Tạo tài khoản cá nhân
+      const newAccount = new Account({
+        fullName,
+        email,
+        password: hashedPassword,
+        typeaccount: type,
+        role: roleAccount._id,
+      });
+
+      const savedAccount = await newAccount.save();
+
+      const newInfoAccount = new StaffAccount({
+        account: savedAccount._id,
+        phone: phoneNumber,
+      });
+
+      const savedInfoStaff = await newInfoAccount.save();
+
+      // Phản hồi thành công
+      return res.status(201).json({
+        message: "Khách hàng cá nhân đăng ký thành công",
+        Account: savedAccount,
+        infoAccount: savedInfoStaff,
+      });
+    } else if (type === "company") {
+      // Đăng ký tài khoản công ty
+      const { companyName, taxCode, email, password } = req.body;
+
+      // Kiểm tra các trường bắt buộc
+      if (!companyName || !taxCode || !email || !password) {
+        return res.status(400).json({
+          message:
+            "Company name, tax code, and password are required for company registration",
+        });
+      }
+
+      // Kiểm tra mã số thuế đã tồn tại chưa
+      const existingTaxcode = await StaffAccount.findOne({ MST: taxCode });
+      if (existingTaxcode) {
+        return res.status(400).json({ message: "Tax code already exists" });
+      }
+
+      const existingEmail = await Account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      // Tìm vai trò mặc định "Manager"
+      const roleAccount = await Role.findOne({ name: "Manager" });
+      if (!roleAccount) {
+        return res
+          .status(500)
+          .json({ message: "Default role 'Manager' not found" });
+      }
+
+      // Mã hóa mật khẩu
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Tạo tài khoản công ty
+      const newAccount = new Account({
+        email,
+        password: hashedPassword,
+        typeaccount: type,
+        role: roleAccount._id,
+      });
+
+      const savedAccount = await newAccount.save();
+
+      const newInfoAccount = new StaffAccount({
+        account: savedAccount._id,
+        MST: taxCode,
+        companyName,
+      });
+
+      const savedInfoStaff = await newInfoAccount.save();
+
+      // Phản hồi thành công
+      return res.status(201).json({
+        message: "Khách hàng doanh nghiệp đăng ký thành công",
+        Account: savedAccount,
+        infoAccount: savedInfoStaff,
+      });
+    } else {
+      return res.status(400).json({ message: "Invalid account type" });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
