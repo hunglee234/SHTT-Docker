@@ -433,8 +433,103 @@ exports.registerService = async (req, res) => {
   }
 };
 
+exports.updateGeneralProfileByAdmin = async (req, res) => {
+  const { profileId } = req.params;
+  const { profileCode, numberOfCertificates, dateActive, status } = req.body;
+  try {
+    const profile = await Profile.findOne({ _id: profileId });
+    if (!profile) {
+      return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
+    }
+    // Cập nhật các trường bởi Admin
+    const changes = [];
+
+    const updateField = (field, newValue) => {
+      if (newValue !== undefined && newValue !== null && newValue !== "") {
+        if (profile[field] !== newValue) {
+          changes.push({
+            field,
+            oldValue: profile[field],
+            newValue,
+          });
+          profile[field] = newValue;
+        }
+      }
+    };
+
+    updateField("profileCode", profileCode);
+    updateField("numberOfCertificates", numberOfCertificates);
+
+    if (dateActive) {
+      const formattedDate = moment(dateActive, "DD/MM/YYYY", true);
+      if (formattedDate.isValid()) {
+        updateField("dateActive", formattedDate.startOf("day").toDate());
+      } else {
+        return res.status(400).json({ message: "Ngày không hợp lệ!" });
+      }
+    }
+
+    updateField("status", status);
+
+    await profile.save();
+    if (changes.length === 0) {
+      return res
+        .status(200)
+        .json({ message: "Không có thay đổi nào được thực hiện." });
+    }
+
+    const profileUpdatedByAdmin = await Profile.findById(profile._id).populate([
+      {
+        path: "registeredService",
+        populate: {
+          path: "serviceId",
+          select: "serviceName description",
+          populate: { path: "category", select: "categoryName" },
+        },
+      },
+      {
+        path: "processes",
+        select: "processContent completionDate pdfUrl status",
+      },
+      {
+        path: "image",
+        select: "url",
+      },
+      {
+        path: "createdBy updatedBy",
+        select: "fullName",
+      },
+    ]);
+
+    const newNoti = await Noti.create({
+      profileId,
+      message: `Trạng thái hồ sơ ${profileId} đã được cập nhật thông tin mới.`,
+      status: "New",
+    });
+
+    // Tìm email dựa theo UserId
+    const userMail = await Account.findOne({ _id: profile.createdBy });
+    // Gửi thông báo khi thông tin khác thay đổi
+    const emailSubject = "Trạng thái hồ sơ của bạn đã được cập nhật";
+    const emailText = `Xin chào ${userMail.fullName},\n\nTrạng thái hồ sơ của bạn đã được cập nhật. \n\n Trạng thái hồ sơ hiện tại của bạn là ${status}. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
+
+    await sendMail(userMail.email, emailSubject, emailText);
+
+    res.status(200).json({
+      message: "Admin cập nhật số đơn số bằng thành công",
+      data: { UpdatedProfile: profileUpdatedByAdmin, notification: newNoti },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Đã xảy ra lỗi khi cập nhật hồ sơ",
+      error: error.message,
+    });
+  }
+};
+
 // Update 09/01/2025 updateProfile Info
-exports.updateProfileByAdmin = async (req, res) => {
+exports.updateDetailsProfile = async (req, res) => {
   const { profileId } = req.params;
   const userId = req.user.id;
   const userRole = req.user.role;
@@ -477,35 +572,6 @@ exports.updateProfileByAdmin = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
     }
-
-    // Cập nhật các trường bởi Admin
-    const { profileCode, numberOfCertificates, dateActive, status } = req.body;
-    const changes = [];
-
-    const updateField = (field, newValue) => {
-      if (newValue !== undefined && newValue !== null && newValue !== "") {
-        if (profile[field] !== newValue) {
-          changes.push({
-            field,
-            oldValue: profile[field],
-            newValue,
-          });
-          if (field === "dateActive") {
-            const formattedDate = moment(newValue, "DD/MM/YYYY")
-              .startOf("day")
-              .toDate();
-            profile[field] = formattedDate;
-          } else {
-            profile[field] = newValue;
-          }
-        }
-      }
-    };
-
-    updateField("profileCode", profileCode);
-    updateField("numberOfCertificates", numberOfCertificates);
-    updateField("dateActive", dateActive);
-    updateField("status", status);
 
     // Lấy dữ liệu hiện tại của `info`
     const oldInfo = profile.info;
@@ -614,176 +680,11 @@ exports.updateProfileByAdmin = async (req, res) => {
 
     // Tìm email dựa theo UserId
     const userMail = await Account.findOne({ _id: profile.createdBy });
-
     // Gửi thông báo khi thông tin khác thay đổi
     const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
     const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
 
     await sendMail(userMail.email, emailSubject, emailText);
-
-    // Trả về phản hồi
-    res.status(200).json({
-      message: "Cập nhật hồ sơ thành công",
-      data: { updatedProfile: fullProFileWithImage, notification: newNoti },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      message: "Đã xảy ra lỗi khi cập nhật hồ sơ dịch vụ",
-      error: error.message,
-    });
-  }
-};
-
-
-
-exports.updateProfileByClient = async (req, res) => {
-  const { profileId } = req.params;
-  const userId = req.user.id;
-  const userRole = req.user.role;
-  try {
-    let filter = { _id: profileId };
-    let registeredServiceIds = [];
-    const changes = [];
-
-    if (userRole === "Manager") {
-      const managedServices = await RegisteredService.find({
-        managerUserId: userId,
-      });
-      const managedServiceIds = managedServices.map((service) => service._id);
-
-      filter = {
-        ...filter,
-        registeredService: { $in: managedServiceIds },
-      };
-    } else if (userRole === "Staff" || userRole === "Collaborator") {
-      const listRegisteredServices = await RegisteredService.find({
-        createdUserId: userId,
-      });
-
-      registeredServiceIds = listRegisteredServices.map(
-        (service) => service._id
-      );
-
-      filter = {
-        ...filter,
-        registeredService: { $in: registeredServiceIds },
-      };
-    }
-
-    // Tìm hồ sơ theo profileId
-    const profile = await Profile.findOne(filter);
-    // console.log("Profile", profile.createdBy);
-
-    if (!profile) {
-      return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
-    }
-
-    // Kiểm tra trạng thái của hồ sơ trước khi cho phép sửa
-    if (profile.status !== "Chờ duyệt") {
-      return res.status(400).json({
-        message: "Chỉ có thể sửa hồ sơ khi trạng thái là 'Chờ duyệt'",
-      });
-    }
-
-    // Lấy dữ liệu hiện tại của `info`
-    const oldInfo = profile.info;
-    const updatedInfo = JSON.parse(req.body.info || "[]"); // Lấy thông tin mới từ request body
-
-    const galleryFiles = req.files.gallery || [];
-
-    let imageId = null;
-    if (req.files.image && req.files.image[0].mimetype.includes("image")) {
-      const imageUrl = req.files.image[0].location;
-      imageId = await saveFile(imageUrl, "image");
-    }
-
-    // Lặp qua các phần tử `updatedInfo` để so sánh và cập nhật
-    if (updatedInfo.length > 0) {
-      updatedInfo.forEach((newInfo) => {
-        const oldInfoSection = oldInfo.find(
-          (section) => section.type === newInfo.type
-        );
-        if (!oldInfoSection) return;
-
-        newInfo.fields.forEach((newField) => {
-          const oldField = oldInfoSection.fields.find(
-            (field) => field.name === newField.name
-          );
-          // Kiểm tra chi tiết giá trị mới
-          if (!oldField || oldField.value === newField.value) return;
-
-          // Ghi nhận thay đổi
-          changes.push({
-            type: newInfo.type,
-            fieldName: newField.name,
-            oldValue: oldField.value,
-            newValue: newField.value,
-          });
-          // Cập nhật giá trị trong `info`
-          oldField.value = newField.value;
-        });
-      });
-    }
-
-    // Xử lý file mới và cập nhật gallery
-    updatedInfo.forEach((newInfo) => {
-      newInfo.fields.forEach((newField, index) => {
-        if (newField.fieldType === "image" || newField.fieldType === "pdf") {
-          const file = galleryFiles[index];
-          if (file) {
-            newField.value = file.location;
-          }
-        }
-      });
-    });
-
-    // Nếu không có thay đổi, trả về phản hồi
-    if (changes.length === 0 && !imageId && galleryFiles.length === 0) {
-      return res
-        .status(200)
-        .json({ message: "Không có thay đổi nào được thực hiện" });
-    }
-
-    profile.updatedBy = userId;
-    // Cập nhật lại thông tin của hồ sơ
-    profile.info = updatedInfo;
-
-    if (imageId) {
-      profile.image = imageId;
-    }
-
-    // Lưu hồ sơ đã cập nhật
-    await profile.save();
-
-    const fullProFileWithImage = await Profile.findById(profile._id).populate([
-      {
-        path: "registeredService",
-        populate: {
-          path: "serviceId",
-          select: "serviceName description",
-          populate: { path: "category", select: "categoryName" },
-        },
-      },
-      {
-        path: "processes",
-        select: "processContent completionDate pdfUrl status",
-      },
-      {
-        path: "image",
-        select: "url",
-      },
-      {
-        path: "createdBy updatedBy",
-        select: "fullName",
-      },
-    ]);
-
-    const newNoti = await Noti.create({
-      profileId,
-      message: `Hồ sơ ${profileId} đã được cập nhật thông tin mới.`,
-      status: "New",
-    });
 
     // Trả về phản hồi
     res.status(200).json({
@@ -840,22 +741,8 @@ exports.getProfileList = async (req, res) => {
       filter = { registeredService: { $in: registeredServiceIds } };
     }
 
-    const listProfile = await Profile.find(filter)
-      .populate([
-        {
-          path: "registeredService",
-          populate: {
-            path: "serviceId",
-            select: "serviceName description",
-          },
-        },
-        {
-          path: "image",
-          select: "url",
-        },
-      ])
-      .skip(skip)
-      .limit(limit);
+    const listProfile = await Profile.find(filter);
+
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(filter);
 
@@ -1101,7 +988,7 @@ exports.getEditHistory = async (req, res) => {
   }
 };
 
-exports.getServiceByUserId = async (req, res) => {
+exports.getProfileSVByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
@@ -1111,16 +998,15 @@ exports.getServiceByUserId = async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const registeredServices = await RegisteredService.find(serviceQuery)
-      .populate([
-        {
-          path: "serviceId",
-          select: "serviceName description",
-          populate: { path: "category", select: "categoryName" },
-        },
-      ])
-      .skip(skip)
-      .limit(parseInt(limit));
+    const registeredServices = await RegisteredService.find(
+      serviceQuery
+    ).populate([
+      {
+        path: "serviceId",
+        select: "serviceName description",
+        populate: { path: "category", select: "categoryName" },
+      },
+    ]);
 
     if (!registeredServices) {
       return res.status(404).json({
@@ -1128,16 +1014,48 @@ exports.getServiceByUserId = async (req, res) => {
       });
     }
 
-    const totalServices = await RegisteredService.countDocuments(serviceQuery);
-    const totalPages = Math.ceil(totalServices / limit);
+    const serviceIds = registeredServices.filter(
+      (service) => service.serviceId
+    );
+
+    const profiles = await Profile.find({
+      registeredService: { $in: serviceIds },
+    })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select("-info")
+      .populate([
+        {
+          path: "registeredService",
+          populate: {
+            path: "serviceId",
+            select: "serviceName description",
+            populate: { path: "category", select: "categoryName" },
+          },
+        },
+        {
+          path: "image",
+          select: "url",
+        },
+        {
+          path: "createdBy updatedBy",
+          select: "fullName",
+        },
+      ]);
+
+    const totalProfiles = await Profile.countDocuments({
+      registeredService: { $in: serviceIds },
+    });
+
+    const totalPages = Math.ceil(totalProfiles / limit);
 
     return res.status(200).json({
       message: "Dịch vụ của người dùng :",
       data: {
         currentPage: page,
         totalPages: totalPages,
-        totalServices: totalServices,
-        registeredServices: registeredServices,
+        totalProfiles: totalProfiles,
+        profiles: profiles,
       },
     });
   } catch (error) {
