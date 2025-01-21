@@ -21,7 +21,7 @@ router.put(
     { name: "gallery", maxCount: 3 },
     { name: "image", maxCount: 1 },
   ]),
-  serviceController.updateProfileByClient
+  serviceController.updateDetailsProfile
 );
 
 // Lấy danh sách dịch vụ (cần đăng nhập)

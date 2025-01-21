@@ -26,9 +26,3 @@ const registeredServiceSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("registeredService", registeredServiceSchema);
-
-// Đảm bảo rằng một người dùng không đăng ký trùng lặp cùng một dịch vụ
-// registeredServiceSchema.index(
-//   { serviceId: 1, createdUserId: 1 },
-//   { unique: true }
-// );

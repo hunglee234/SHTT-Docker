@@ -30,12 +30,18 @@ router.post(
 );
 
 router.put(
-  "/u/:profileId",
+  "/u/:profileId/general",
+  upload.none(),
+  serviceController.updateGeneralProfileByAdmin
+);
+
+router.put(
+  "/u/:profileId/details",
   upload.fields([
     { name: "gallery", maxCount: 3 },
     { name: "image", maxCount: 1 },
   ]),
-  serviceController.updateProfileByAdmin
+  serviceController.updateDetailsProfile
 );
 
 router.get("/list", serviceController.getProfileList);
