@@ -56,6 +56,11 @@ exports.createStaff = async (req, res) => {
       return res.status(404).json({ error: "Role không tồn tại." });
     }
 
+    const existingPhone = await StaffAccount.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
+    }
+
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
@@ -385,6 +390,11 @@ exports.updateStaff = async (req, res) => {
         return res.status(404).json({ error: "Role không tồn tại." });
       }
       staffAccount.account.role = roleExists._id; // Cập nhật vai trò của nhân viên
+    }
+
+    const existingPhone = await StaffAccount.findOne({ phone });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Phone number already exists" });
     }
 
     const existingEmail = await Account.findOne({ email });

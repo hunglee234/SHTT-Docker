@@ -90,10 +90,23 @@ exports.updateMe = async (req, res) => {
       return res.status(400).json({ message: "Phone number already exists" });
     }
 
+    const existingTaxcode = await StaffAccount.findOne({ MST });
+    if (existingTaxcode) {
+      return res.status(400).json({ message: "MST already exists" });
+    }
+
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
         message: "Email đã tồn tại!",
+      });
+    }
+
+    // Kiểm tra username có tồn tại không
+    const existingUsername = await Account.findOne({ username });
+    if (existingUsername) {
+      return res.status(400).json({
+        message: "Username đã tồn tại!",
       });
     }
 
