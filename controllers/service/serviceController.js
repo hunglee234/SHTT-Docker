@@ -304,6 +304,133 @@ exports.deleteService = async (req, res) => {
   }
 };
 
+exports.registerServicebyAdmin = async (req, res) => {
+  const { formName, userId } = req.params;
+  const createdUserId = req.user.id;
+
+  try {
+    // Tìm dịch vụ
+    const service = await Service.findOne({
+      formName: formName,
+    }).populate("createdBy");
+    // console.log("Tìm dịch vụ theo form ", service);
+    if (!service) {
+      return res.status(404).json({ message: "Dịch vụ không tồn tại!" });
+    }
+    // console.log("Đây là id dịch vụ theo form ", service._id);
+
+    const infoData = JSON.parse(req.body.info || "[]");
+
+    const galleryFiles = req.files.gallery || [];
+
+    let imageId = null;
+    if (req.files.image && req.files.image[0].mimetype.includes("image")) {
+      const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
+      imageId = await saveFile(imageUrl, "image");
+    }
+
+    const responseObject = {
+      info: infoData.map((infoItem) => ({
+        type: infoItem.type,
+        fields: infoItem.fields.map((field, index) => {
+          if (field.fieldType === "text") {
+            // Gán giá trị text vào các trường
+            return {
+              name: field.name,
+              value: field.value,
+              fieldType: field.fieldType,
+            };
+          } else if (field.fieldType === "image" || field.fieldType === "pdf") {
+            // Xử lý file (ảnh hoặc pdf)
+            const file = galleryFiles[index];
+            return {
+              name: field.name,
+              value: file.location,
+              fieldType: file.mimetype.startsWith("image") ? "image" : "pdf",
+            };
+          }
+        }),
+      })),
+    };
+
+    const managerInfo = await StaffAccount.findOne({ account: userId });
+
+    if (!managerInfo) {
+      return res
+        .status(500)
+        .json({ message: "Không tìm thấy thông tin người quản lý dịch vụ!" });
+    }
+    // Tạo tài liệu RegisteredService
+    const newService = new RegisteredService({
+      serviceId: service._id,
+      managerUserId: managerInfo?.createdByManager || null,
+      createdUserId: userId,
+    });
+    const savedService = await newService.save(); // đợi kết quả trả về từ cơ sở dữ liệu và lưu vào savedService
+    // console.log("Chứa thông tin quản lý của tài khoản này", savedService);
+    // Tạo hồ sơ mới
+    // phải thêm serviceId vào newProfile
+    const newProfile = new Profile({
+      registeredService: savedService._id,
+      serviceId: service._id,
+      info: responseObject.info,
+      createdBy: createdUserId,
+      image: imageId || null,
+    });
+    const savedProfile = await newProfile.save();
+
+    // Tạo bản ghi lịch sử chỉnh sửa (Record)
+    const initialRecord = new Record({
+      profileId: savedProfile._id,
+      status: "pending", // Mặc định trạng thái khi tạo mới
+      recordType: "Đơn đăng ký",
+    });
+    const savedRecord = await initialRecord.save();
+    // Cập nhật hồ sơ với thông tin record
+    savedProfile.record.push(savedRecord._id);
+    await savedProfile.save();
+
+    const fullProfile = await Profile.findById(savedProfile._id)
+      .populate({
+        path: "serviceId", // Tham chiếu đến Service
+        select: "id serviceName description category",
+        populate: {
+          path: "category", // Tham chiếu đến Category trong Service
+          select: "categoryName description",
+        },
+      })
+      .populate({
+        path: "registeredService",
+        select: "createdUserId",
+        populate: {
+          path: "createdUserId", // Tham chiếu đến Category trong Service
+          select: "fullName",
+        },
+      })
+      .populate({
+        path: "image",
+        select: "url",
+      })
+      .select("_id status info");
+    // Kiểm tra nếu không tìm thấy profile
+    if (!fullProfile) {
+      return res.status(404).json({
+        message: "Không tìm thấy hồ sơ với ID được cung cấp.",
+      });
+    }
+
+    return res.status(201).json({
+      message: "Đăng ký dịch vụ và tạo hồ sơ thành công!",
+      data: fullProfile,
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "Có lỗi xảy ra, vui lòng thử lại sau!" });
+  }
+};
+
 // Chức năng cho User, Manager, Nhân viên, cộng tác viên
 // Đăng ký dịch vụ
 exports.registerService = async (req, res) => {
