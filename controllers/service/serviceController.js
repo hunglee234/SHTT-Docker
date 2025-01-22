@@ -279,10 +279,8 @@ exports.deleteService = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Admin") {
-      return res
-        .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+    if (!account.role || account.role.name !== "SuperAdmin") {
+      return res.status(403).json({ error: "Bạn không có quyền xóa dịch vụ" });
     }
 
     const deletedService = await Service.findByIdAndDelete(id);
@@ -1036,7 +1034,7 @@ exports.deleteProfile = async (req, res) => {
 
   try {
     // Kiểm tra quyền truy cập: chỉ Admin hoặc Manager được phép xóa
-    if (!["Admin", "Manager"].includes(userRole)) {
+    if (!["SuperAdmin", "Manager"].includes(userRole)) {
       return res.status(403).json({
         message: "Bạn không có quyền xóa hồ sơ.",
       });
@@ -1045,7 +1043,7 @@ exports.deleteProfile = async (req, res) => {
     let filter = { _id: profileId };
     let registeredServiceIds = [];
 
-    if (userRole === "Admin") {
+    if (userRole === "SuperAdmin") {
       const profile = await Profile.findById(profileId);
       if (!profile) {
         return res.status(404).json({ message: "Hồ sơ không tồn tại." });

@@ -20,7 +20,12 @@ app.use(passport.initialize());
 app.use("/", authRoutes);
 
 // Route dành cho admin
-app.use("/admin", authenticateToken, authorizeRole(["Admin"]), adminRoutes);
+app.use(
+  "/admin",
+  authenticateToken,
+  authorizeRole(["Admin", "SuperAdmin"]),
+  adminRoutes
+);
 
 // Route dành cho client
 // Bổ sung authenticateToken, authorizeRole(["ManagerManager"])

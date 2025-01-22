@@ -211,10 +211,10 @@ exports.deleteCategory = async (req, res) => {
 
     // Kiểm tra vai trò của tài khoản
     const role = account.role;
-    if (!role || role.name !== "Admin") {
+    if (!role || role.name !== "SuperAdmin") {
       return res
         .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+        .json({ error: "Bạn không có quyền xóa loại dịch vụ" });
     }
 
     // Xóa danh mục

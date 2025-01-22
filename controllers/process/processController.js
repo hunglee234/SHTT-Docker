@@ -1,6 +1,10 @@
 const Process = require("../../models/Process");
 const Profile = require("../../models/Service/Profile");
 const Noti = require("../../models/Noti");
+const Account = require("../../models/Account/Account");
+const dayjs = require("dayjs");
+const customParseFormat = require("dayjs/plugin/customParseFormat");
+dayjs.extend(customParseFormat);
 
 exports.createProcess = async (req, res) => {
   const { profileId } = req.params;
@@ -66,13 +70,41 @@ exports.getProcesses = async (req, res) => {
 
 exports.updateProcess = async (req, res) => {
   const { processId } = req.params;
-  const { processContent, completionDate, documents } = req.body;
-
+  const { name, status, completionDate } = req.body;
+  const pdfFile = req.file || {};
+  const pdfId = pdfFile.location;
+  const userId = req.user.id;
   try {
+    const parsedcompletionDate = dayjs(completionDate, "DD/MM/YYYY").isValid()
+      ? dayjs(completionDate, "DD/MM/YYYY").toDate()
+      : null;
+    const account = await Account.findById(userId).populate("role");
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    if (!account.role || account.role.name !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ error: "Bạn không có quyền sửa tiến trình" });
+    }
+    // Tìm tiến trình cần cập nhật
+    const process = await Process.findById(processId);
+    if (!process) {
+      return res.status(404).json({ message: "Không tìm thấy tiến trình" });
+    }
+
+    // Cập nhật tiến trình
     const updatedProcess = await Process.findByIdAndUpdate(
       processId,
-      { processContent, completionDate, documents },
-      { new: true }
+      {
+        processContent: name,
+        completionDate: parsedcompletionDate,
+        pdfUrl: pdfId,
+        status: status,
+      },
+      { new: true, runValidators: true }
     );
 
     if (!updatedProcess) {
@@ -91,8 +123,19 @@ exports.updateProcess = async (req, res) => {
 
 exports.deleteProcess = async (req, res) => {
   const { processId, profileId } = req.params;
-
+  const userId = req.user.id;
   try {
+    const account = await Account.findById(userId).populate("role");
+
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    if (!account.role || account.role.name !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ error: "Bạn không có quyền xóa tiến trình" });
+    }
     // Xóa tiến trình
     await Process.findByIdAndDelete(processId);
 

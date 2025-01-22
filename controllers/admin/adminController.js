@@ -267,6 +267,7 @@ exports.getAccountById = async (req, res) => {
 exports.updateAccount = async (req, res) => {
   try {
     const { id } = req.params; // Lấy id nhân viên từ params
+    const userId = req.user.id;
     const {
       fullName,
       dateOfBirth,
@@ -280,6 +281,13 @@ exports.updateAccount = async (req, res) => {
       joinDate,
       role: roleName,
     } = req.body;
+
+    const roleSPAdmin = await Account.findById(userId).populate("role");
+    if (!roleSPAdmin || roleSPAdmin.role.name !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền cập nhật tài khoản này." });
+    }
 
     // Kiểm tra avatar nếu có
     let avatarId = null;
@@ -315,11 +323,6 @@ exports.updateAccount = async (req, res) => {
     const existingPhone = await StaffAccount.findOne({ phone });
     if (existingPhone) {
       return res.status(400).json({ message: "Phone number already exists" });
-    }
-
-    const existingTaxcode = await StaffAccount.findOne({ MST });
-    if (existingTaxcode) {
-      return res.status(400).json({ message: "MST already exists" });
     }
 
     const existingEmail = await Account.findOne({ email });
@@ -363,18 +366,12 @@ exports.updateAccount = async (req, res) => {
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       staffAccount.account.password = hashedPassword; // Mã hóa mật khẩu
-      console.log("hashedPassword", hashedPassword);
-      console.log("hashedPassword2", staffAccount.account.password);
       staffAccount.markModified("account");
     }
-
-    console.log("pass", password);
-    console.log("pmh", staffAccount.account.password);
 
     // Lưu thông tin nhân viên và tài khoản
     await staffAccount.save();
     await staffAccount.account.save();
-    console.log(staffAccount.account);
 
     // Trả về thông tin nhân viên đã cập nhật
     const accountWithAvatar = await StaffAccount.findById(
@@ -418,7 +415,14 @@ exports.deleteAccount = async (req, res) => {
   try {
     const { id } = req.params; // ID của StaffAccount cần xóa
     const userId = req.user.id;
-    
+
+    const roleSPAdmin = await Account.findById(userId).populate("role");
+    if (!roleSPAdmin || roleSPAdmin.role.name !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền xóa tài khoản này." });
+    }
+
     // Lấy thông tin StaffAccount
     const staffAccount = await StaffAccount.findById(id).populate("account");
     if (!staffAccount) {

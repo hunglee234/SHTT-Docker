@@ -469,11 +469,18 @@ exports.updateCustomer = async (req, res) => {
   }
 };
 
-// Hàm xóa nhân viên
+// Hàm xóa khách hàng
 exports.deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params; // ID của StaffAccount cần xóa
     const userId = req.user.id;
+
+    const roleSPAdmin = await Account.findById(userId).populate("role");
+    if (!roleSPAdmin || roleSPAdmin.role.name !== "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền xóa khách hàng này." });
+    }
 
     // Lấy thông tin tài khoản hiện tại và vai trò
     const currentUser = await Account.findById(id).populate("role");

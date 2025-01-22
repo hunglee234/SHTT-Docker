@@ -10,7 +10,11 @@ router.post(
   processController.createProcess
 );
 router.get("/:profileId/processes", processController.getProcesses);
-router.put("/:processId", processController.updateProcess);
+router.put(
+  "/:processId",
+  upload.single("pdfFile"),
+  processController.updateProcess
+);
 router.delete(
   "/:profileId/processes/:processId",
   processController.deleteProcess
