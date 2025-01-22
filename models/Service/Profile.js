@@ -4,7 +4,11 @@ const mongoose = require("mongoose");
 const fieldSchema = new mongoose.Schema({
   name: { type: String, required: true },
   value: { type: mongoose.Schema.Types.Mixed, required: true },
-  fieldType: { type: String, required: true },
+  fieldType: {
+    type: String,
+    required: true,
+    enum: ["text", "file", "image", "email", "select"],
+  },
 });
 
 // Định nghĩa schema cho phần `info` bên trong `Profile`

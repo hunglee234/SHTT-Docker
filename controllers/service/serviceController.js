@@ -333,6 +333,13 @@ exports.registerServicebyAdmin = async (req, res) => {
       info: infoData.map((infoItem) => ({
         type: infoItem.type,
         fields: infoItem.fields.map((field, index) => {
+          if (field.fieldType === "select") {
+            return {
+              name: field.name,
+              value: field.value || "Không có giá trị",
+              fieldType: field.fieldType,
+            };
+          }
           if (field.fieldType === "text") {
             // Gán giá trị text vào các trường
             return {
@@ -462,6 +469,14 @@ exports.registerService = async (req, res) => {
       info: infoData.map((infoItem) => ({
         type: infoItem.type,
         fields: infoItem.fields.map((field, index) => {
+          if (field.fieldType === "select") {
+            return {
+              name: field.name,
+              value: field.value || "Không có giá trị",
+              fieldType: field.fieldType,
+            };
+          }
+
           if (field.fieldType === "text") {
             // Gán giá trị text vào các trường
             return {
@@ -963,7 +978,7 @@ exports.getProfileDetails = async (req, res) => {
         path: "registeredService",
         populate: {
           path: "serviceId",
-          select: "serviceName description",
+          select: "serviceName description formName",
           populate: { path: "category", select: "categoryName" },
         },
       },
