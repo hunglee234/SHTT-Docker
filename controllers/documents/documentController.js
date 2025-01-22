@@ -1,5 +1,5 @@
 const Document = require("../../models/Documents");
-
+const Account = require("../../models/Account/Account");
 // Thêm thủ tục
 exports.createDocument = async (req, res) => {
   try {
@@ -56,7 +56,16 @@ exports.updateDocument = async (req, res) => {
 // Xóa thủ tục
 exports.deleteDocument = async (req, res) => {
   const { documentId } = req.params;
+  const userId = req.user.id;
   try {
+    const account = await Account.findById(userId).populate("role");
+    if (!account) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+
+    if (!account.role || account.role.name !== "SuperAdmin") {
+      return res.status(403).json({ error: "Bạn không có quyền xóa thủ tục" });
+    }
     const Documents = await Document.findByIdAndDelete(documentId);
     if (!Documents) {
       return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
