@@ -18,6 +18,13 @@ const TicketSchema = new mongoose.Schema(
       ref: "Account",
       required: true,
     },
+    adminResponse: { type: String, default: null },
+    isAnswered: { type: Boolean, default: false },
+    answeredBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Account",
+      default: null,
+    },
   },
   {
     timestamps: true,

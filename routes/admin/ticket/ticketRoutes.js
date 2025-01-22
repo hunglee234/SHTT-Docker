@@ -13,6 +13,7 @@ router.get("/", TicketController.getAllTickets);
 // Xem chi tiết ticket
 router.get("/:id", TicketController.getTicketById);
 
+router.put("/reply/:ticketId", TicketController.replyTicket);
 // Cập nhật trạng thái ticket
 router.put("/:id", TicketController.updateTicketStatus);
 

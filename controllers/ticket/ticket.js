@@ -117,7 +117,10 @@ exports.getTicketById = async (req, res) => {
     const user = req.user;
     const { id } = req.params;
 
-    const ticket = await Ticket.findById(id);
+    const ticket = await Ticket.findById(id).populate({
+      path: "createdBy answeredBy",
+      select: "fullName",
+    });
     if (!ticket) {
       return res.status(404).json({ error: "Ticket not found." });
     }
@@ -149,7 +152,11 @@ exports.getTicketByUserId = async (req, res) => {
     const skip = (page - 1) * limit;
     const ticketCustomer = await Ticket.find(ticketQuery)
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .populate({
+        path: "createdBy answeredBy",
+        select: "fullName",
+      });
 
     if (!ticketCustomer) {
       return res.status(404).json({
@@ -237,5 +244,41 @@ exports.deleteTicket = async (req, res) => {
   } catch (error) {
     console.error("Error deleting ticket:", error);
     res.status(500).json({ error: "Failed to delete ticket." });
+  }
+};
+
+// Trả lời ticket
+exports.replyTicket = async (req, res) => {
+  const { ticketId } = req.params;
+  const { adminResponse } = req.body;
+  const { id: adminId } = req.user;
+
+  try {
+    // Tìm và cập nhật ticket
+    const updatedTicket = await Ticket.findByIdAndUpdate(
+      ticketId,
+      {
+        adminResponse,
+        isAnswered: true,
+        answeredBy: adminId,
+      },
+      { new: true } // Đảm bảo trả về dữ liệu sau khi cập nhật
+    )
+      .populate("answeredBy", "fullName email") // Populate thông tin người trả lời
+      .exec();
+    // Kiểm tra nếu ticket không tồn tại
+    if (!updatedTicket) {
+      return res.status(404).json({ message: "Ticket không tồn tại!" });
+    }
+
+    return res.status(200).json({
+      message: "Phản hồi ticket thành công!",
+      data: updatedTicket,
+    });
+  } catch (error) {
+    console.error("Lỗi khi trả lời ticket:", error);
+    return res
+      .status(500)
+      .json({ message: "Có lỗi xảy ra, vui lòng thử lại sau!" });
   }
 };
