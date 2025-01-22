@@ -61,11 +61,6 @@ exports.createAccount = async (req, res) => {
       return res.status(400).json({ message: "Phone number already exists" });
     }
 
-    const existingTaxcode = await StaffAccount.findOne({ MST });
-    if (existingTaxcode) {
-      return res.status(400).json({ message: "MST already exists" });
-    }
-
     const existingEmail = await Account.findOne({ email });
     if (existingEmail) {
       return res.status(400).json({
@@ -115,7 +110,6 @@ exports.createAccount = async (req, res) => {
       select: "url", // Chỉ lấy trường url trong Avatar
     });
 
-    console.log(accountWithAvatar);
     const avatarUrl = accountWithAvatar.avatar?.url || null;
 
     // Dữ liệu trả về cho client
@@ -419,16 +413,16 @@ exports.updateAccount = async (req, res) => {
   }
 };
 
-// Hàm xóa nhân viên
+// Hàm xóa tài khoản
 exports.deleteAccount = async (req, res) => {
   try {
     const { id } = req.params; // ID của StaffAccount cần xóa
     const userId = req.user.id;
-
+    
     // Lấy thông tin StaffAccount
     const staffAccount = await StaffAccount.findById(id).populate("account");
     if (!staffAccount) {
-      return res.status(404).json({ message: "Nhân viên không tồn tại." });
+      return res.status(404).json({ message: "Tài khoản không tồn tại." });
     }
 
     // Xóa cả Account và StaffAccount

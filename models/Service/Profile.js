@@ -7,7 +7,7 @@ const fieldSchema = new mongoose.Schema({
   fieldType: {
     type: String,
     required: true,
-    enum: ["text", "file", "image", "email", "select"],
+    enum: ["text", "pdf", "image", "email", "select"],
   },
 });
 

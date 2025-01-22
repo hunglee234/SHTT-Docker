@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Account = require("../models/Account/Account");
+const InfoAccount = require("../models/Account/InfoStaff");
 const Role = require("../models/Role");
 const bcrypt = require("bcrypt");
 
@@ -13,36 +14,38 @@ const seeDatabase = async () => {
         useUnifiedTopology: true,
       }
     );
-    console.log(resultHung.connections[0].name); //
-    console.log("Kết nối mongoDB thành công");
+    console.log(resultHung.connections[0].name);
+    console.log("Kết nối MongoDB thành công");
 
-    // Tạo người dùng vói các role, sử dụng _id của role
+    // Tìm role Admin
     const adminRole = await Role.findOne({ name: "Admin" });
-    console.log(adminRole);
 
-    const managerRole = await Role.findOne({ name: "Manager" });
-    console.log(managerRole);
-
+    // Mã hóa mật khẩu
     const adminPassword = await bcrypt.hash("admin123", 10);
-    const managerPassword = await bcrypt.hash("manager123", 10);
 
+    // Tạo tài khoản admin
     const account = [
       {
-        fullName: "Admin User",
-        email: "admin2345@example.com",
+        fullName: "Admin",
+        email: "admin1@example.com",
         password: adminPassword,
-        role: adminRole._id,
-      }, // Lưu _id của role
-      {
-        fullName: "Manager User",
-        email: "manager2345@example.com",
-        password: managerPassword,
-        role: managerRole._id,
-      }, // Lưu _id của role
+        role: adminRole._id, // Lưu _id của role Admin
+      },
     ];
 
-    await Account.insertMany(account);
-    console.log("Account added");
+    // Thêm tài khoản admin vào database
+    const savedAccount = await Account.insertMany(account);
+    console.log("Account added:", savedAccount);
+
+    // Tạo tài liệu InfoAccount cho Admin
+    const infoAccounts = savedAccount.map((account) => ({
+      account: account._id, // Liên kết với _id trong bảng Account
+      phone: "0969623498",
+    }));
+
+    // Thêm tài liệu InfoAccount vào database
+    await InfoAccount.insertMany(infoAccounts);
+    console.log("InfoAccount added:", infoAccounts);
 
     console.log("Database đã được thêm thành công");
     process.exit(0);
