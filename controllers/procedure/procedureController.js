@@ -95,7 +95,7 @@ exports.getAllProcedures = async (req, res) => {
     const procedures = await Procedure.find(procedureQuery)
       .skip(skip)
       .limit(parseInt(limit))
-      .select("name");
+      .select("name content");
 
     const totalProcedures = await Procedure.countDocuments(procedureQuery);
     const totalPages = Math.ceil(totalProcedures / limit);
