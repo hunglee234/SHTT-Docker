@@ -14,6 +14,7 @@ const { saveFile } = require("../../utils/saveFile");
 const { populate } = require("../../models/Role");
 const moment = require("moment");
 const sendMail = require("../../controllers/email/emailController");
+const Procedure = require("../../models/Procedure");
 
 // CREATE
 exports.createService = async (req, res) => {
@@ -26,6 +27,8 @@ exports.createService = async (req, res) => {
       serviceCode,
       price,
       status,
+      procedure_id,
+      formName,
     } = req.body;
 
     let imageId = null;
@@ -59,6 +62,12 @@ exports.createService = async (req, res) => {
       return res.status(404).json({ error: "Loại dịch vụ không tồn tại." });
     }
 
+    const procedure = await Procedure.findById(procedure_id);
+
+    if (!procedure) {
+      return res.status(404).json({ error: "Thủ tục hướng dẫn không tồn tại." });
+    }
+
     const createdBy = account._id;
     const newService = new Service({
       status,
@@ -70,6 +79,8 @@ exports.createService = async (req, res) => {
       notes,
       image: imageId || null,
       createdBy,
+      procedure: procedure._id,
+      formName
     });
 
     const savedService = await newService.save();
@@ -119,6 +130,9 @@ exports.getAllServices = async (req, res) => {
       .populate({
         path: "createdBy",
         select: "fullName",
+      })
+      .populate({
+        path: "procedure"
       })
       .exec();
 
