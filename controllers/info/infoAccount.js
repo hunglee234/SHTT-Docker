@@ -36,7 +36,7 @@ exports.getMe = async (req, res) => {
 
     // Định dạng dữ liệu trả về
     const responseData = {
-      avatar: staff.avatar.url || null,
+      avatar: staff.avatar ? staff.avatar.url : "",
       password: staff.account.password,
       fullName: staff.account.fullName,
       email: staff.account.email,
