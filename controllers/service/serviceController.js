@@ -176,6 +176,10 @@ exports.getServiceById = async (req, res) => {
         path: "updatedBy",
         select: "fullName",
       })
+      .populate({
+        path: "procedure",
+        select: "name",
+      })
       .exec();
 
     if (!service) {
