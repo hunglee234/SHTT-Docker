@@ -61,12 +61,7 @@ exports.getAllTickets = async (req, res) => {
     }
 
     // Điều kiện xác định quyền truy cập của người dùng
-    if (
-      user.role === "Admin" ||
-      user.role === "Manager" ||
-      user.role === "Employee" ||
-      user.role === "Collaborator"
-    ) {
+    if (user.role === "SuperAdmin" || user.role === "Admin") {
     } else {
       ticketsQuery.createdBy = user.id;
     }

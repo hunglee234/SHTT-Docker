@@ -1,4 +1,5 @@
 const ROLES = {
+  SUPERADMIN: "SuperAdmin",
   ADMIN: "Admin",
   MANAGER: "Manager",
   STAFF: "Staff",
@@ -7,6 +8,7 @@ const ROLES = {
 };
 
 const ADMIN_AND_TEAM = [
+  ROLES.SUPERADMIN,
   ROLES.ADMIN,
   ROLES.MANAGER,
   ROLES.STAFF,
