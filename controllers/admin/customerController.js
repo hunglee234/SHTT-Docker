@@ -258,6 +258,10 @@ exports.getStaffCustomerId = async (req, res) => {
       .populate({
         path: "avatar", // Populate thông tin avatar
         select: "url", // Lấy chỉ trường url của avatar
+      })
+      .populate({
+        path: "createdByManager", // Populate thông tin avatar
+        select: "fullName", // Lấy chỉ trường url của avatar
       });
 
     // Kiểm tra nếu không tìm thấy nhân viên
@@ -282,17 +286,20 @@ exports.getStaffCustomerId = async (req, res) => {
       infoAccountID: staff._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
-      companyName: staff.account.companyName,
-      zalo: staff.account.zalo,
-      MST: staff.account.MST,
+      companyName: staff.companyName,
+      zalo: staff.zalo,
+      MST: staff.MST,
       email: staff.account.email,
+      website: staff.website,
       username: staff.account.username,
       role: staff.account.role,
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
       status: staff.status,
-      createdByManager: staff.account.createdByManager,
+      createdByManager: staff.createdByManager,
+      createdDate: staff.createdAt,
+      updateDate: staff.updatedAt,
     };
 
     // Trả về thông tin chi tiết của nhân viên
