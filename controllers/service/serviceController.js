@@ -715,6 +715,7 @@ exports.updateDetailsProfile = async (req, res) => {
   try {
     let filter = { _id: profileId };
     let registeredServiceIds = [];
+    const changes = [];
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
