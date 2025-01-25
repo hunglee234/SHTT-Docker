@@ -399,7 +399,7 @@ exports.updateCustomer = async (req, res) => {
           .status(400)
           .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
       }
-      staffAccount.staffCode;
+      staffAccount.staffCode = staffCode;
     }
 
     if (phone && phone !== staffAccount.phone) {
@@ -415,7 +415,7 @@ exports.updateCustomer = async (req, res) => {
       if (existingTaxcode) {
         return res.status(400).json({ message: "MST already exists" });
       }
-      staffAccount.account.MST;
+      staffAccount.account.MST = MST;
     }
 
     if (email && email !== staffAccount.account.email) {
@@ -436,7 +436,7 @@ exports.updateCustomer = async (req, res) => {
           message: "Username đã tồn tại!",
         });
       }
-      staffAccount.account.username;
+      staffAccount.account.username = username;
     }
 
     // Cập nhật các thông tin khác nếu có thay đổi
