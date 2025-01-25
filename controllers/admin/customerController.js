@@ -377,7 +377,6 @@ exports.updateCustomer = async (req, res) => {
       account: id,
     }).populate("account");
 
-    console.log("Thông tin khách hàng", staffAccount);
     if (!staffAccount) {
       return res.status(404).json({ error: "khách hàng không tồn tại." });
     }
@@ -392,50 +391,64 @@ exports.updateCustomer = async (req, res) => {
     }
 
     // Kiểm tra mã khách hàng ( dùng trường chung  StaffCode)
-    const existingStaffCode = await StaffAccount.findOne({ staffCode });
-    if (existingStaffCode) {
-      return res
-        .status(400)
-        .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
+
+    if (staffCode && staffCode !== staffAccount.staffCode) {
+      const existingStaffCode = await StaffAccount.findOne({ staffCode });
+      if (existingStaffCode) {
+        return res
+          .status(400)
+          .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
+      }
+      staffAccount.staffCode;
     }
 
-    const existingPhone = await StaffAccount.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({ message: "Phone number already exists" });
+    if (phone && phone !== staffAccount.phone) {
+      const existingPhone = await StaffAccount.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Phone number already exists" });
+      }
+      staffAccount.phone = phone;
     }
 
-    const existingTaxcode = await StaffAccount.findOne({ MST });
-    if (existingTaxcode) {
-      return res.status(400).json({ message: "MST already exists" });
+    if (MST && MST !== staffAccount.account.MST) {
+      const existingTaxcode = await StaffAccount.findOne({ MST });
+      if (existingTaxcode) {
+        return res.status(400).json({ message: "MST already exists" });
+      }
+      staffAccount.account.MST;
     }
 
-    const existingEmail = await Account.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({
-        message: "Email đã tồn tại!",
-      });
+    if (email && email !== staffAccount.account.email) {
+      const existingEmail = await Account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({
+          message: "Email đã tồn tại!",
+        });
+      }
+      staffAccount.account.email = email;
     }
 
     // Kiểm tra username có tồn tại không
-    const existingUsername = await Account.findOne({ username });
-    if (existingUsername) {
-      return res.status(400).json({
-        message: "Username đã tồn tại!",
-      });
+    if (username && username !== staffAccount.account.username) {
+      const existingUsername = await Account.findOne({ username });
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "Username đã tồn tại!",
+        });
+      }
+      staffAccount.account.username;
     }
 
     // Cập nhật các thông tin khác nếu có thay đổi
     if (fullName) staffAccount.account.fullName = fullName;
-    if (email) staffAccount.account.email = email;
-    if (phone) staffAccount.phone = phone;
+
     if (address) staffAccount.address = address;
-    if (staffCode) staffAccount.staffCode = staffCode;
+
     if (status) staffAccount.status = status;
 
     if (companyName) staffAccount.account.companyName = companyName;
     if (website) staffAccount.account.website = website;
     if (zalo) staffAccount.account.zalo = zalo;
-    if (MST) staffAccount.account.zalo = MST;
 
     // Cập nhật avatar nếu có
     if (avatarId) {
@@ -443,7 +456,7 @@ exports.updateCustomer = async (req, res) => {
     }
 
     // Cập nhật username và password nếu có
-    if (username) staffAccount.account.username = username;
+
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       staffAccount.account.password = hashedPassword; // Mã hóa mật khẩu
