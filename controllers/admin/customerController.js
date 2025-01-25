@@ -403,12 +403,12 @@ exports.updateCustomer = async (req, res) => {
       staffAccount.phone = phone;
     }
 
-    if (MST && MST !== staffAccount.account.MST) {
+    if (MST && MST !== staffAccount.MST) {
       const existingTaxcode = await StaffAccount.findOne({ MST });
       if (existingTaxcode) {
         return res.status(400).json({ message: "MST already exists" });
       }
-      staffAccount.account.MST = MST;
+      staffAccount.MST = MST;
     }
 
     if (email && email !== staffAccount.account.email) {
@@ -439,9 +439,9 @@ exports.updateCustomer = async (req, res) => {
 
     if (status) staffAccount.status = status;
 
-    if (companyName) staffAccount.account.companyName = companyName;
-    if (website) staffAccount.account.website = website;
-    if (zalo) staffAccount.account.zalo = zalo;
+    if (companyName) staffAccount.companyName = companyName;
+    if (website) staffAccount.website = website;
+    if (zalo) staffAccount.zalo = zalo;
 
     // Cập nhật avatar nếu có
     if (avatarId) {
@@ -473,10 +473,10 @@ exports.updateCustomer = async (req, res) => {
       id: staffAccount._id,
       avatar: avatarUrl,
       fullName: staffAccount.account.fullName,
-      companyName: staffAccount.account.companyName,
-      website: staffAccount.account.website,
-      zalo: staffAccount.account.zalo,
-      MST: staffAccount.account.MST,
+      companyName: staffAccount.companyName,
+      website: staffAccount.website,
+      zalo: staffAccount.zalo,
+      MST: staffAccount.MST,
       email: staffAccount.account.email,
       phone: staffAccount.phone,
       address: staffAccount.address,
