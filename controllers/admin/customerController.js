@@ -7,7 +7,7 @@ const Role = require("../../models/Role");
 const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
-// Tạo tài khoản nhân viên
+// Tạo tài khoản khach hang
 exports.createCustomer = async (req, res) => {
   try {
     const {
@@ -54,6 +54,14 @@ exports.createCustomer = async (req, res) => {
     const roleExists = await Role.findOne({ name: roleName });
     if (!roleExists) {
       return res.status(404).json({ error: "Role không tồn tại." });
+    }
+
+    // Kiểm tra mã khách hàng ( dùng trường chung  StaffCode)
+    const existingStaffCode = await StaffAccount.findOne({ staffCode });
+    if (existingStaffCode) {
+      return res
+        .status(400)
+        .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
     }
 
     // Kiểm tra xem số điện thoại đã tồn tại chưa
@@ -381,6 +389,14 @@ exports.updateCustomer = async (req, res) => {
         return res.status(404).json({ error: "Role không tồn tại." });
       }
       staffAccount.account.role = roleExists._id; // Cập nhật vai trò của nhân viên
+    }
+
+    // Kiểm tra mã khách hàng ( dùng trường chung  StaffCode)
+    const existingStaffCode = await StaffAccount.findOne({ staffCode });
+    if (existingStaffCode) {
+      return res
+        .status(400)
+        .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
     }
 
     const existingPhone = await StaffAccount.findOne({ phone });
