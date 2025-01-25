@@ -84,6 +84,24 @@ exports.updateMe = async (req, res) => {
       avatarId = await saveAvatar(avatarUrl);
     }
 
+    // Lấy thông tin tài khoản của người dùng hiện tại
+    const account = await Account.findById(userId).populate("role");
+    if (!account) {
+      return res.status(404).json({ error: "Tài khoản không tồn tại." });
+    }
+
+    // Tìm thông tin liên quan từ StaffAccount
+    const staffAccount = await StaffAccount.findOne({ account: account._id })
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role password",
+        populate: { path: "role", select: "name" },
+      })
+      .populate({
+        path: "avatar", // Populate thông tin avatar
+        select: "url", // Lấy chỉ trường url của avatar
+      });
+
     // Kiểm tra xem số điện thoại đã tồn tại chưa
     if (phone && phone !== staffAccount.phone) {
       const existingPhone = await StaffAccount.findOne({ phone });
@@ -121,24 +139,6 @@ exports.updateMe = async (req, res) => {
     const parsedJoinDate = dayjs(joinDate, "DD/MM/YYYY").isValid()
       ? dayjs(joinDate, "DD/MM/YYYY").toDate()
       : null;
-
-    // Lấy thông tin tài khoản của người dùng hiện tại
-    const account = await Account.findById(userId).populate("role");
-    if (!account) {
-      return res.status(404).json({ error: "Tài khoản không tồn tại." });
-    }
-
-    // Tìm thông tin liên quan từ StaffAccount
-    const staffAccount = await StaffAccount.findOne({ account: account._id })
-      .populate({
-        path: "account",
-        select: "fullName email username avatar role password",
-        populate: { path: "role", select: "name" },
-      })
-      .populate({
-        path: "avatar", // Populate thông tin avatar
-        select: "url", // Lấy chỉ trường url của avatar
-      });
 
     // Cập nhật các thông tin của tài khoản
     if (fullName) account.fullName = fullName;
