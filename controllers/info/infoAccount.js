@@ -85,24 +85,33 @@ exports.updateMe = async (req, res) => {
     }
 
     // Kiểm tra xem số điện thoại đã tồn tại chưa
-    const existingPhone = await StaffAccount.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({ message: "Phone number already exists" });
+    if (phone && phone !== staffAccount.phone) {
+      const existingPhone = await StaffAccount.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Phone number already exists" });
+      }
+      staffAccount.phone = phone;
     }
 
-    const existingEmail = await Account.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({
-        message: "Email đã tồn tại!",
-      });
+    if (email && email !== staffAccount.account.email) {
+      const existingEmail = await Account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({
+          message: "Email đã tồn tại!",
+        });
+      }
+      staffAccount.account.email = email;
     }
 
     // Kiểm tra username có tồn tại không
-    const existingUsername = await Account.findOne({ username });
-    if (existingUsername) {
-      return res.status(400).json({
-        message: "Username đã tồn tại!",
-      });
+    if (username && username !== staffAccount.account.username) {
+      const existingUsername = await Account.findOne({ username });
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "Username đã tồn tại!",
+        });
+      }
+      staffAccount.account.username = username;
     }
 
     // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date
@@ -133,10 +142,6 @@ exports.updateMe = async (req, res) => {
 
     // Cập nhật các thông tin của tài khoản
     if (fullName) account.fullName = fullName;
-    if (email) account.email = email;
-
-    if (username) account.username = username;
-
     // Cập nhật avatar nếu có
     if (avatarId) {
       staffAccount.avatar = avatarId;
@@ -147,7 +152,6 @@ exports.updateMe = async (req, res) => {
     // Cập nhật các thông tin từ StaffAccount
     if (website) staffAccount.website = website;
     if (companyName) staffAccount.companyName = companyName;
-    if (phone) staffAccount.phone = phone;
     if (address) staffAccount.address = address;
     if (dateOfBirth) {
       staffAccount.dateOfBirth = parsedDateOfBirth;
