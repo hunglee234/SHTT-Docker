@@ -26,6 +26,4 @@ router.put("/me", upload.single("avatar"), infoAccount.updateMe);
 
 router.use("/", regisService);
 
-// router.use("")
-
 module.exports = router;

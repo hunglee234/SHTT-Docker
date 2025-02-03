@@ -1,10 +1,10 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../../models/User/User");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const SECRET_KEY = "hungdzvclra";
+const sendMail = require("../../controllers/email/emailController");
 
 exports.login2 = async (req, res) => {
   const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
@@ -218,4 +218,25 @@ exports.logout = (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Logout failed", error: error.message });
   }
+};
+
+// Quên mật khẩu
+exports.forgotpassword = async (req, res) => {
+  const { email } = req.body;
+  const account = await Account.findOne({ email });
+  if (!account)
+    return res.status(400).json({ message: "Email không tồn tại!" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  account.resetCode = otp;
+  account.resetCodeExpire = Date.now() + 10 * 60 * 1000; // Hết hạn sau 10 phút
+  await account.save();
+
+  await transporter.sendMail({
+    to: email,
+    subject: "Mã xác thực quên mật khẩu",
+    text: `Mã xác thực của bạn là: ${otp}`,
+  });
+
+  res.json({ message: "Mã xác thực đã được gửi đến email." });
 };

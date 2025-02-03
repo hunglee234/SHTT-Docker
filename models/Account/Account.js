@@ -6,6 +6,8 @@ const accountSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId, // ID mặc định của MongoDB
       default: () => new mongoose.Types.ObjectId(),
     },
+    resetCode: { type: String },
+    resetCodeExpire: { type: Date },
     fullName: { type: String, default: "" },
     email: {
       type: String,

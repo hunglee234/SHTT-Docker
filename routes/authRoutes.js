@@ -15,6 +15,11 @@ router.post("/login", login2);
 // Đăng xuất
 router.post("/logout", logout);
 
-// Bổ sung tính năng quên mật khẩu
+// Quên mật khẩu
+// router.post("/forgot-password", forgotpassword);
+// Xác nhận mã code
+// router.post("/verify-code", verifycode);
+// Đặt lại mật khẩu
+// router.post("/resetpassword", resetpassword);
 
 module.exports = router;
