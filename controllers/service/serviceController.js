@@ -925,7 +925,17 @@ exports.getProfileList = async (req, res) => {
       filter = { registeredService: { $in: registeredServiceIds } };
     }
 
-    const listProfile = await Profile.find(filter);
+    const listProfile = await Profile.find(filter).populate([
+      {
+        path: "serviceId",
+        select: "serviceName description formName",
+        populate: { path: "category", select: "categoryName" },
+      },
+      {
+        path: "image",
+        select: "url",
+      },
+    ]);
 
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(filter);
