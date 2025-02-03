@@ -351,7 +351,10 @@ exports.updateCustomer = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Admin") {
+    if (
+      !account.role ||
+      (account.role.name !== "Admin" && account.role.name !== "SuperAdmin")
+    ) {
       return res
         .status(403)
         .json({ error: "Bạn không có quyền cập nhật nhân viên." });
@@ -362,7 +365,6 @@ exports.updateCustomer = async (req, res) => {
       account: id,
     }).populate("account");
 
-    console.log("Thông tin khách hàng", staffAccount);
     if (!staffAccount) {
       return res.status(404).json({ error: "khách hàng không tồn tại." });
     }

@@ -153,8 +153,6 @@ exports.getFullAccountList = async (req, res) => {
       populate: { path: "role", select: "name" }, // Giả sử role là một tài liệu được populate
     });
 
-    // console.log(staffAccounts);
-
     // Lọc ra các tài khoản có vai trò "Admin"
 
     const filteredAccounts = staffAccounts.filter(
