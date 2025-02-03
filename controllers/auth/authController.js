@@ -69,6 +69,8 @@ exports.login2 = async (req, res) => {
       account: {
         id: account._id,
         avatar: avatarUrl,
+        fullName: account.fullName || null,
+        companyName: accountInfo.companyName || null,
         username: account.username,
         identifier,
         role: roleAccount.role.name || roleAccount.role,

@@ -18,7 +18,6 @@ exports.getMe = async (req, res) => {
     console.log(userId);
     // Lấy thông tin tài khoản hiện tại
     const account = await Account.findById(userId).populate("role");
-    console.log("a", account);
     if (!account) {
       return res.status(404).json({ error: "Tài khoản không tồn tại." });
     }
