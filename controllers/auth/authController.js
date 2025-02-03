@@ -1,87 +1,21 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const User = require("../../models/User/User");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const SECRET_KEY = "hungdzvclra";
-const generateAutoCode = require("../../utils/autoIncrement");
-
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    user = await User.findOne({ email }).populate("role");
-    if (user) {
-      accountType = "User";
-    } else {
-      user = await Account.findOne({ email }).populate("role");
-      if (user) {
-        accountType = "Account";
-        const staffAccount = await StaffAccount.findOne({
-          account: user._id,
-        });
-        user.staffAccount = staffAccount;
-      }
-    }
-    // console.log("a", user);
-    if (!user) {
-      return res.status(404).json({ message: "Email not found" });
-    }
-
-    // Kiểm tra mật khẩu
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Tạo token JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role.name || user.role },
-      SECRET_KEY,
-      { expiresIn: "1h" }
-    );
-
-    user.token = token;
-    await user.save();
-
-    const accountWithAvatar = await StaffAccount.findOne({
-      account: user._id,
-    }).populate({
-      path: "avatar",
-      select: "url",
-    });
-
-    // console.log(accountWithAvatar);
-    const avatarUrl = accountWithAvatar.avatar?.url || null;
-    // Trả về token và thông tin người dùng
-    return res.json({
-      message: "Login successful",
-      token,
-      accountType,
-      user: {
-        avatar: avatarUrl,
-        username: user.username,
-        id: user._id,
-        email: user.email,
-        role: user.role.name || user.role,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-};
+const sendMail = require("../../controllers/email/emailController");
 
 exports.login2 = async (req, res) => {
   const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
   try {
+    let accountInfo = null;
     // Tìm MST hoặc SDT trong InfoAccount
     if (/^(0[3|5|7|8|9])+([0-9]{8})$/.test(identifier)) {
       accountInfo = await StaffAccount.findOne({ phone: identifier }).populate(
         "account"
       );
-    } else if (/^\d{10,13}$/.test(identifier)) {
-      // Nếu là MST (10-13 chữ số)
+    } else {
       accountInfo = await StaffAccount.findOne({ MST: identifier }).populate(
         "account"
       );
@@ -170,7 +104,7 @@ exports.register = async (req, res) => {
         return res.status(400).json({ message: "Email already exists" });
       }
       // Kiểm tra xem số điện thoại đã tồn tại chưa
-      const existingPhone = await StaffAccount.findOne({ phone });
+      const existingPhone = await StaffAccount.findOne({ phone: phoneNumber });
       if (existingPhone) {
         return res.status(400).json({ message: "Phone number already exists" });
       }
@@ -285,4 +219,25 @@ exports.logout = (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Logout failed", error: error.message });
   }
+};
+
+// Quên mật khẩu
+exports.forgotpassword = async (req, res) => {
+  const { email } = req.body;
+  const account = await Account.findOne({ email });
+  if (!account)
+    return res.status(400).json({ message: "Email không tồn tại!" });
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  account.resetCode = otp;
+  account.resetCodeExpire = Date.now() + 10 * 60 * 1000; // Hết hạn sau 10 phút
+  await account.save();
+
+  await transporter.sendMail({
+    to: email,
+    subject: "Mã xác thực quên mật khẩu",
+    text: `Mã xác thực của bạn là: ${otp}`,
+  });
+
+  res.json({ message: "Mã xác thực đã được gửi đến email." });
 };

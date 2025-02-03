@@ -34,5 +34,4 @@ Thumbs.db
 .npm/
 
 # Timestamps and lock files
-package-lock.json
 yarn.lock
