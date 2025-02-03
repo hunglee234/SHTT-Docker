@@ -3,9 +3,11 @@ const bcrypt = require("bcryptjs");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
-const SECRET_KEY = "hungdzvclra";
+require("dotenv").config();
 const sendMail = require("../../controllers/email/emailController");
+const crypto = require("crypto");
 
+require("dotenv").config();
 exports.login2 = async (req, res) => {
   const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
   try {
@@ -46,7 +48,7 @@ exports.login2 = async (req, res) => {
         id: account._id,
         role: roleAccount.role.name || roleAccount.role,
       },
-      SECRET_KEY,
+      process.env.SECRET_KEY,
       { expiresIn: "1h" }
     );
 
@@ -224,22 +226,93 @@ exports.logout = (req, res) => {
 };
 
 // Quên mật khẩu
+
 exports.forgotpassword = async (req, res) => {
-  const { email } = req.body;
-  const account = await Account.findOne({ email });
-  if (!account)
-    return res.status(400).json({ message: "Email không tồn tại!" });
+  try {
+    const { email } = req.body;
+    const account = await Account.findOne({ email });
+    if (!account)
+      return res.status(400).json({ message: "Email không tồn tại!" });
 
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  account.resetCode = otp;
-  account.resetCodeExpire = Date.now() + 10 * 60 * 1000; // Hết hạn sau 10 phút
-  await account.save();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-  await transporter.sendMail({
-    to: email,
-    subject: "Mã xác thực quên mật khẩu",
-    text: `Mã xác thực của bạn là: ${otp}`,
-  });
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
-  res.json({ message: "Mã xác thực đã được gửi đến email." });
+    account.resetCode = hashedOtp;
+    account.resetCodeExpire = Date.now() + 10 * 60 * 1000;
+    await account.save();
+
+    // Gửi email chứa OTP
+    const emailSubject = "Mã xác thực quên mật khẩu";
+    const emailText = `Mã xác thực của bạn là: ${otp}`;
+    try {
+      await sendMail(account.email, emailSubject, emailText);
+      res.json({ message: "Mã xác thực đã được gửi đến email." });
+    } catch (error) {
+      console.error("Lỗi gửi email:", error);
+      res.status(500).json({ message: "Lỗi khi gửi email, vui lòng thử lại!" });
+    }
+  } catch (error) {
+    console.error("Lỗi xử lý quên mật khẩu:", error);
+    res
+      .status(500)
+      .json({ message: "Đã có lỗi xảy ra, vui lòng thử lại sau!" });
+  }
+};
+
+// Xác nhận mã code
+exports.verifycode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    const account = await Account.findOne({ email });
+
+    if (!account)
+      return res.status(400).json({ message: "Email không tồn tại!" });
+
+    // Mã hóa mã code người dùng nhập vào để kiểm tra
+    const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
+
+    if (
+      account.resetCode !== hashedCode ||
+      account.resetCodeExpire < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Mã xác thực không hợp lệ hoặc đã hết hạn!" });
+    }
+
+    // Tạo token cho bước đặt lại mật khẩu
+    const token = jwt.sign({ id: account._id }, process.env.SECRET_KEY, {
+      expiresIn: "15m",
+    });
+
+    res.json({ message: "Xác thực thành công!", token });
+  } catch (error) {
+    console.error("Lỗi xử lý xác thực mã:", error);
+    res
+      .status(500)
+      .json({ message: "Đã có lỗi xảy ra, vui lòng thử lại sau!" });
+  }
+};
+
+// Đặt lại mật khẩu
+exports.resetpassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const account = await Account.findById(decoded.id);
+    if (!account)
+      return res.status(400).json({ message: "Người dùng không tồn tại!" });
+
+    // Cập nhật mật khẩu mới
+    account.password = await bcrypt.hash(newPassword, 10);
+    account.resetCode = undefined;
+    account.resetCodeExpire = undefined;
+    await account.save();
+
+    res.json({ message: "Mật khẩu đã được cập nhật!" });
+  } catch (error) {
+    console.error("Lỗi đặt lại mật khẩu:", error);
+    res.status(400).json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
+  }
 };
