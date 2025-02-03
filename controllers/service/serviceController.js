@@ -983,12 +983,9 @@ exports.getProfileDetails = async (req, res) => {
     // Tìm Profile theo profileId và lọc các dịch vụ của userId trong registeredService
     const profile = await Profile.findOne(filter).populate([
       {
-        path: "registeredService",
-        populate: {
-          path: "serviceId",
-          select: "serviceName description formName",
-          populate: { path: "category", select: "categoryName" },
-        },
+        path: "serviceId",
+        select: "serviceName description formName",
+        populate: { path: "category", select: "categoryName" },
       },
       {
         path: "processes",
