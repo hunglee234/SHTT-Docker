@@ -233,14 +233,12 @@ exports.forgotpassword = async (req, res) => {
     if (!account)
       return res.status(400).json({ message: "Email không tồn tại!" });
 
-    // Tạo OTP ngẫu nhiên
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Mã hóa OTP trước khi lưu vào database (tùy chọn, giúp bảo mật)
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
 
     account.resetCode = hashedOtp;
-    account.resetCodeExpire = Date.now() + 10 * 60 * 1000; // Hết hạn sau 10 phút
+    account.resetCodeExpire = Date.now() + 10 * 60 * 1000;
     await account.save();
 
     // Gửi email chứa OTP
