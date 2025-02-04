@@ -894,9 +894,12 @@ exports.getProfileList = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
+  const search_value = req.query.search_value || "";
+
   try {
     let filter = {};
     let registeredServiceIds = [];
+    let serviceQuery = {};
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
@@ -923,17 +926,38 @@ exports.getProfileList = async (req, res) => {
       filter = { registeredService: { $in: registeredServiceIds } };
     }
 
-    const listProfile = await Profile.find(filter).populate([
-      {
-        path: "serviceId",
-        select: "serviceName description formName",
-        populate: { path: "category", select: "categoryName" },
-      },
-      {
-        path: "image",
-        select: "url",
-      },
-    ]);
+    if (
+      search_value &&
+      search_value.trim() !== "" &&
+      search_value.trim() !== '""'
+    ) {
+      const cleanSearchValue = search_value.replace(/"/g, "").trim();
+
+      // 🔎 Truy vấn danh sách Service có serviceName khớp với search_value
+      const matchingServices = await Service.find({
+        serviceName: { $regex: cleanSearchValue, $options: "i" },
+      }).select("_id");
+
+      const matchingServiceIds = matchingServices.map((service) => service._id);
+
+      // ✅ Thêm điều kiện lọc theo serviceId
+      filter.serviceId = { $in: matchingServiceIds };
+    }
+
+    const listProfile = await Profile.find(filter)
+      .populate([
+        {
+          path: "serviceId",
+          select: "serviceName description formName",
+          populate: { path: "category", select: "categoryName" },
+        },
+        {
+          path: "image",
+          select: "url",
+        },
+      ])
+      .skip(skip)
+      .limit(limit);
 
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(filter);
