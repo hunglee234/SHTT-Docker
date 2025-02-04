@@ -7,7 +7,7 @@ const Role = require("../../models/Role");
 const dayjs = require("dayjs");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
 dayjs.extend(customParseFormat);
-// Tạo tài khoản nhân viên
+// Tạo tài khoản khach hang
 exports.createCustomer = async (req, res) => {
   try {
     const {
@@ -54,6 +54,14 @@ exports.createCustomer = async (req, res) => {
     const roleExists = await Role.findOne({ name: roleName });
     if (!roleExists) {
       return res.status(404).json({ error: "Role không tồn tại." });
+    }
+
+    // Kiểm tra mã khách hàng ( dùng trường chung  StaffCode)
+    const existingStaffCode = await StaffAccount.findOne({ staffCode });
+    if (existingStaffCode) {
+      return res
+        .status(400)
+        .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
     }
 
     // Kiểm tra xem số điện thoại đã tồn tại chưa
@@ -258,6 +266,10 @@ exports.getStaffCustomerId = async (req, res) => {
       .populate({
         path: "avatar", // Populate thông tin avatar
         select: "url", // Lấy chỉ trường url của avatar
+      })
+      .populate({
+        path: "createdByManager", // Populate thông tin avatar
+        select: "fullName", // Lấy chỉ trường url của avatar
       });
 
     // Kiểm tra nếu không tìm thấy nhân viên
@@ -282,17 +294,20 @@ exports.getStaffCustomerId = async (req, res) => {
       infoAccountID: staff._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
-      companyName: staff.account.companyName,
-      zalo: staff.account.zalo,
-      MST: staff.account.MST,
+      companyName: staff.companyName,
+      zalo: staff.zalo,
+      MST: staff.MST,
       email: staff.account.email,
+      website: staff.website,
       username: staff.account.username,
       role: staff.account.role,
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
       status: staff.status,
-      createdByManager: staff.account.createdByManager,
+      createdByManager: staff.createdByManager,
+      createdDate: staff.createdAt,
+      updateDate: staff.updatedAt,
     };
 
     // Trả về thông tin chi tiết của nhân viên
@@ -378,43 +393,65 @@ exports.updateCustomer = async (req, res) => {
       staffAccount.account.role = roleExists._id; // Cập nhật vai trò của nhân viên
     }
 
-    const existingPhone = await StaffAccount.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({ message: "Phone number already exists" });
+    // Kiểm tra mã khách hàng ( dùng trường chung  StaffCode)
+
+    if (staffCode && staffCode !== staffAccount.staffCode) {
+      const existingStaffCode = await StaffAccount.findOne({ staffCode });
+      if (existingStaffCode) {
+        return res
+          .status(400)
+          .json({ message: "Mã khách hàng đã tồn tại, vui lòng thử lại" });
+      }
+      staffAccount.staffCode = staffCode;
     }
 
-    const existingTaxcode = await StaffAccount.findOne({ MST });
-    if (existingTaxcode) {
-      return res.status(400).json({ message: "MST already exists" });
+    if (phone && phone !== staffAccount.phone) {
+      const existingPhone = await StaffAccount.findOne({ phone });
+      if (existingPhone) {
+        return res.status(400).json({ message: "Phone number already exists" });
+      }
+      staffAccount.phone = phone;
     }
 
-    const existingEmail = await Account.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({
-        message: "Email đã tồn tại!",
-      });
+    if (MST && MST !== staffAccount.MST) {
+      const existingTaxcode = await StaffAccount.findOne({ MST });
+      if (existingTaxcode) {
+        return res.status(400).json({ message: "MST already exists" });
+      }
+      staffAccount.MST = MST;
+    }
+
+    if (email && email !== staffAccount.account.email) {
+      const existingEmail = await Account.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({
+          message: "Email đã tồn tại!",
+        });
+      }
+      staffAccount.account.email = email;
     }
 
     // Kiểm tra username có tồn tại không
-    const existingUsername = await Account.findOne({ username });
-    if (existingUsername) {
-      return res.status(400).json({
-        message: "Username đã tồn tại!",
-      });
+    if (username && username !== staffAccount.account.username) {
+      const existingUsername = await Account.findOne({ username });
+      if (existingUsername) {
+        return res.status(400).json({
+          message: "Username đã tồn tại!",
+        });
+      }
+      staffAccount.account.username = username;
     }
 
     // Cập nhật các thông tin khác nếu có thay đổi
     if (fullName) staffAccount.account.fullName = fullName;
-    if (email) staffAccount.account.email = email;
-    if (phone) staffAccount.phone = phone;
+
     if (address) staffAccount.address = address;
-    if (staffCode) staffAccount.staffCode = staffCode;
+
     if (status) staffAccount.status = status;
 
-    if (companyName) staffAccount.account.companyName = companyName;
-    if (website) staffAccount.account.website = website;
-    if (zalo) staffAccount.account.zalo = zalo;
-    if (MST) staffAccount.account.zalo = MST;
+    if (companyName) staffAccount.companyName = companyName;
+    if (website) staffAccount.website = website;
+    if (zalo) staffAccount.zalo = zalo;
 
     // Cập nhật avatar nếu có
     if (avatarId) {
@@ -422,7 +459,7 @@ exports.updateCustomer = async (req, res) => {
     }
 
     // Cập nhật username và password nếu có
-    if (username) staffAccount.account.username = username;
+
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
       staffAccount.account.password = hashedPassword; // Mã hóa mật khẩu
@@ -446,10 +483,10 @@ exports.updateCustomer = async (req, res) => {
       id: staffAccount._id,
       avatar: avatarUrl,
       fullName: staffAccount.account.fullName,
-      companyName: staffAccount.account.companyName,
-      website: staffAccount.account.website,
-      zalo: staffAccount.account.zalo,
-      MST: staffAccount.account.MST,
+      companyName: staffAccount.companyName,
+      website: staffAccount.website,
+      zalo: staffAccount.zalo,
+      MST: staffAccount.MST,
       email: staffAccount.account.email,
       phone: staffAccount.phone,
       address: staffAccount.address,

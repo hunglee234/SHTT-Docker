@@ -78,6 +78,7 @@ exports.login2 = async (req, res) => {
         role: roleAccount.role.name || roleAccount.role,
         phone: accountInfo.phone || null,
         MST: accountInfo.MST || null,
+        typeAccount: account.typeaccount,
       },
     });
   } catch (error) {

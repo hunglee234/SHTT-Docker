@@ -36,6 +36,11 @@ const serviceSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    procedure: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Procedure",
+      required: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now,
@@ -79,15 +84,15 @@ const serviceSchema = new mongoose.Schema(
 );
 serviceSchema.index({ serviceName: "text" });
 // Middleware để tự động cập nhật formName từ serviceName
-serviceSchema.pre("save", function (next) {
-  if (this.serviceName) {
-    // Chuyển serviceName thành dạng slug và gán vào formName
-    this.formName = removeVietnameseTones(this.serviceName)
-      .toLowerCase() // Chuyển thành chữ thường
-      .replace(/[\s\-]+/g, "-") // Thay khoảng trắng hoặc dấu '-' bằng '-'
-      .replace(/[^\w\-]+/g, "") // Loại bỏ ký tự không hợp lệ
-      .replace(/^-+|-+$/g, ""); // Loại bỏ dấu '-' ở đầu hoặc cuối
-  }
-  next();
-});
+// serviceSchema.pre("save", function (next) {
+//   if (this.serviceName) {
+//     // Chuyển serviceName thành dạng slug và gán vào formName
+//     this.formName = removeVietnameseTones(this.serviceName)
+//       .toLowerCase() // Chuyển thành chữ thường
+//       .replace(/[\s\-]+/g, "-") // Thay khoảng trắng hoặc dấu '-' bằng '-'
+//       .replace(/[^\w\-]+/g, "") // Loại bỏ ký tự không hợp lệ
+//       .replace(/^-+|-+$/g, ""); // Loại bỏ dấu '-' ở đầu hoặc cuối
+//   }
+//   next();
+// });
 module.exports = mongoose.model("Service", serviceSchema);

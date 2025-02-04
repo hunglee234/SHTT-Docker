@@ -1,18 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const {
-  authenticateToken,
-  authorizeRole,
-} = require("../../../middleware/auth");
-
 const TicketController = require("../../../controllers/ticket/ticket");
 
 // Thêm Authenticate để bắt buộc phải login khi để lại ticket
 router.post("/create", TicketController.createTicket);
 
 // Xem tất cả ticket
-// những ai tạo ticket chỉ xem được của mình thôi
-// Admin, manager, nhân viên, cộng tác viên xem full
+
 router.get("/", TicketController.getAllTickets);
 
 // Xem chi tiết ticket
