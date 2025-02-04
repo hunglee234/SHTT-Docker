@@ -1,16 +1,16 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail", // Hoặc dịch vụ email khác như Yahoo, Outlook
+  service: "gmail",
   auth: {
-    user: "Hunglk.tlu@gmail.com", // Thay bằng email của bạn
-    pass: "vncq vdub roli whbp", // Thay bằng mật khẩu ứng dụng của bạn
+    user: "trituesohuu3@gmail.com",
+    pass: "stnx ouis rbrq btng",
   },
 });
 
 async function sendMail(to, subject, text) {
   const mailOptions = {
-    from: '"Hùng LK" <your-email@gmail.com>',
+    from: '"Sở Hữu Trí Tuệ" <your-email@gmail.com>',
     to,
     subject,
     text,
