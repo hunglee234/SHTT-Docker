@@ -65,7 +65,9 @@ exports.createService = async (req, res) => {
     const procedure = await Procedure.findById(procedure_id);
 
     if (!procedure) {
-      return res.status(404).json({ error: "Thủ tục hướng dẫn không tồn tại." });
+      return res
+        .status(404)
+        .json({ error: "Thủ tục hướng dẫn không tồn tại." });
     }
 
     const createdBy = account._id;
@@ -80,7 +82,7 @@ exports.createService = async (req, res) => {
       image: imageId || null,
       createdBy,
       procedure: procedure._id,
-      formName
+      formName,
     });
 
     const savedService = await newService.save();
@@ -132,7 +134,7 @@ exports.getAllServices = async (req, res) => {
         select: "fullName",
       })
       .populate({
-        path: "procedure"
+        path: "procedure",
       })
       .exec();
 
@@ -886,11 +888,6 @@ exports.updateDetailsProfile = async (req, res) => {
 };
 
 // Lấy danh sách dịch vụ
-// Nhân viên xem được các dịch vụ mình chịu trách nhiệm
-// Nhân viên và cộng tác viên xem được dịch vụ mình đăng ký
-// Manager và Admin xem được hết
-
-// Thêm search vào getProfileList
 exports.getProfileList = async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
@@ -903,7 +900,7 @@ exports.getProfileList = async (req, res) => {
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
@@ -974,7 +971,7 @@ exports.getProfileDetails = async (req, res) => {
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
