@@ -15,7 +15,6 @@ dayjs.extend(customParseFormat);
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(userId);
     // Lấy thông tin tài khoản hiện tại
     const account = await Account.findById(userId).populate("role");
     if (!account) {
@@ -44,9 +43,8 @@ exports.getMe = async (req, res) => {
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
-      dateOfBirth: staff.dateOfBirth,
+      joinDate: staff.createdAt,
       gender: staff.gender,
-      joinDate: staff.joinDate,
     };
     // Trả về dữ liệu cho client
     res.status(200).json(responseData);

@@ -6,8 +6,8 @@ const StaffAccount = require("../../models/Account/InfoStaff");
 require("dotenv").config();
 const sendMail = require("../../controllers/email/emailController");
 const crypto = require("crypto");
-
 require("dotenv").config();
+
 exports.login2 = async (req, res) => {
   const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
   try {
@@ -298,18 +298,27 @@ exports.verifycode = async (req, res) => {
 exports.resetpassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
+    let accountInfo = null;
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
     const account = await Account.findById(decoded.id);
     if (!account)
       return res.status(400).json({ message: "Người dùng không tồn tại!" });
 
+    accountInfo = await StaffAccount.findOne({ account: account._id }).populate(
+      "account"
+    );
     // Cập nhật mật khẩu mới
     account.password = await bcrypt.hash(newPassword, 10);
     account.resetCode = undefined;
     account.resetCodeExpire = undefined;
     await account.save();
 
-    res.json({ message: "Mật khẩu đã được cập nhật!" });
+    res.json({
+      message: "Mật khẩu đã được cập nhật!",
+      account: {
+        identifier: accountInfo.phone || accountInfo.MST || null,
+      },
+    });
   } catch (error) {
     console.error("Lỗi đặt lại mật khẩu:", error);
     res.status(400).json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
