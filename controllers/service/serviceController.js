@@ -512,6 +512,7 @@ exports.registerService = async (req, res) => {
     // console.log("Chứa thông tin quản lý của tài khoản này", savedService);
     // Tạo hồ sơ mới
     // phải thêm serviceId vào newProfile
+
     const newProfile = new Profile({
       registeredService: savedService._id,
       serviceId: service._id,
@@ -1095,8 +1096,8 @@ exports.deleteProfile = async (req, res) => {
     }
 
     await Promise.all([
-      RegisteredService.deleteMany({ _id: { $in: registeredServiceIds } }),
-      Profile.deleteMany(filter),
+      RegisteredService.deleteOne({ _id: { $in: registeredServiceIds } }),
+      Profile.deleteOne(filter),
     ]);
 
     return res.status(200).json({
