@@ -527,6 +527,9 @@ exports.registerService = async (req, res) => {
         .status(500)
         .json({ message: "Không tìm thấy thông tin người quản lý dịch vụ!" });
     }
+
+    const infoRepresent = JSON.parse(req.body.represent || "[]");
+
     // Tạo tài liệu RegisteredService
     const newService = new RegisteredService({
       serviceId: service._id,
@@ -544,6 +547,7 @@ exports.registerService = async (req, res) => {
       info: responseObject.info,
       createdBy: createdUserId,
       image: imageId || null,
+      represent: infoRepresent,
     });
     const savedProfile = await newProfile.save();
 
@@ -579,7 +583,7 @@ exports.registerService = async (req, res) => {
         path: "image",
         select: "url",
       })
-      .select("_id status info");
+      .select("_id status info represent");
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -771,6 +775,7 @@ exports.updateDetailsProfile = async (req, res) => {
 
     const galleryFiles = req.files.gallery || [];
 
+    const infoRepresent = JSON.parse(req.body.represent || "[]");
     let imageId = null;
     if (req.files.image && req.files.image[0].mimetype.includes("image")) {
       const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
@@ -833,6 +838,8 @@ exports.updateDetailsProfile = async (req, res) => {
     profile.updatedBy = userId;
     // Cập nhật lại thông tin của hồ sơ
     profile.info = updatedInfo;
+
+    profile.represent = infoRepresent;
 
     if (imageId) {
       profile.image = imageId;
@@ -976,6 +983,10 @@ exports.getProfileList = async (req, res) => {
         {
           path: "image",
           select: "url",
+        },
+        {
+          path: "createdBy",
+          select: "fullName",
         },
       ])
       .skip(skip)
