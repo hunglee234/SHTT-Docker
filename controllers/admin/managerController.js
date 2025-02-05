@@ -207,8 +207,8 @@ exports.getFullStaffList = async (req, res) => {
     // Kiểm tra nếu không có nhân viên nào
     if (!staffAccounts || staffAccounts.length === 0) {
       return res
-        .status(404)
-        .json({ message: "Không có nhân viên nào được tìm thấy." });
+        .status(202)
+        .json({ message: "Không có nhân viên nào được tìm thấy.", data: "" });
     }
 
     // Phân loại nhân viên và cộng tác viên

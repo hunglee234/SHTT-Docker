@@ -87,10 +87,34 @@ exports.login2 = async (req, res) => {
   }
 };
 
+// Hàm tạo mã khách hàng tự động
+function generateCustomerCode(lastCode, length = 2) {
+  const prefix = "KH"; // Tiền tố cố định
+  let numberPart = 1; // Giá trị mặc định nếu không có mã trước đó
+
+  // Kiểm tra nếu lastCode hợp lệ
+  if (lastCode) {
+    const match = lastCode.match(/^KH(\d+)$/);
+    if (match) {
+      numberPart = parseInt(match[1], 10) + 1;
+    } else {
+      throw new Error("Mã khách hàng không hợp lệ");
+    }
+  }
+
+  // Định dạng số với độ dài tùy chỉnh (mặc định 2)
+  const newCode = `${prefix}${String(numberPart).padStart(length, "0")}`;
+  return newCode;
+}
+
 exports.register = async (req, res) => {
   const { type } = req.body;
 
   try {
+    let lastCustomer = await StaffAccount.findOne().sort({ createdAt: -1 });
+    let lastCustomerCode = lastCustomer ? lastCustomer.staffCode : null;
+    let newCustomerCode = generateCustomerCode(lastCustomerCode);
+
     if (type === "individual") {
       // Đăng ký tài khoản cá nhân
       const { fullName, phoneNumber, email, password } = req.body;
@@ -138,6 +162,7 @@ exports.register = async (req, res) => {
       const newInfoAccount = new StaffAccount({
         account: savedAccount._id,
         phone: phoneNumber,
+        staffCode: newCustomerCode,
       });
 
       const savedInfoStaff = await newInfoAccount.save();
@@ -196,6 +221,7 @@ exports.register = async (req, res) => {
         account: savedAccount._id,
         MST: taxCode,
         companyName,
+        staffCode: newCustomerCode,
       });
 
       const savedInfoStaff = await newInfoAccount.save();

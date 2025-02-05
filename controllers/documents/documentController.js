@@ -81,7 +81,7 @@ exports.deleteDocument = async (req, res) => {
 // Xem danh sách thủ tục
 exports.getAllDocuments = async (req, res) => {
   try {
-    const { search_value, page = 1, limit = 10 } = req.query;
+    const { search_value } = req.query;
     let DocumentQuery = {};
 
     if (
@@ -93,20 +93,11 @@ exports.getAllDocuments = async (req, res) => {
       DocumentQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const skip = (page - 1) * limit;
-    const Documents = await Document.find(DocumentQuery)
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const totalDocuments = await Document.countDocuments(DocumentQuery);
-    const totalPages = Math.ceil(totalDocuments / limit);
+    const Documents = await Document.find(DocumentQuery);
 
     res.status(200).json({
       message: "Danh sách tài liệu:",
       data: {
-        currentPage: page,
-        totalPages: totalPages,
-        totalDocuments: totalDocuments,
         documents: Documents,
       },
     });

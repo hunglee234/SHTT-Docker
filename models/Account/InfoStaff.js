@@ -11,7 +11,7 @@ const infoStaffSchema = new mongoose.Schema(
       ref: "Avatar",
       default: null,
     },
-    staffCode: { type: String, unique: true, default: "" },
+    staffCode: { type: String, default: null },
     dateOfBirth: { type: Date, default: Date.now },
     gender: { type: String, enum: ["Nam", "Nữ", "Khác"], default: "Khác" },
     phone: { type: String, default: "" },

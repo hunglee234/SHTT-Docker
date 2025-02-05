@@ -105,6 +105,8 @@ exports.getAllServices = async (req, res) => {
   try {
     const { search_value, page = 1, limit = 10 } = req.query;
 
+    // Kiểm tra nếu user là Admin hoặc SuperAdmin
+    const isAdmin = req.user && ["Admin", "SuperAdmin"].includes(req.user.role);
     // Khởi tạo query để tìm kiếm
     let serviceQuery = {};
 
@@ -117,10 +119,7 @@ exports.getAllServices = async (req, res) => {
       serviceQuery.serviceName = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const skip = (page - 1) * limit;
-    const services = await Service.find(serviceQuery)
-      .skip(skip)
-      .limit(parseInt(limit))
+    let query = Service.find(serviceQuery)
       .populate({
         path: "image",
         select: "url",
@@ -135,20 +134,26 @@ exports.getAllServices = async (req, res) => {
       })
       .populate({
         path: "procedure",
-      })
-      .exec();
+      });
 
+    // Chỉ phân trang nếu là Admin
+    if (isAdmin) {
+      const skip = (page - 1) * limit;
+      query = query.skip(skip).limit(parseInt(limit));
+    }
+
+    const services = await query.exec();
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
       return res.status(404).json({ message: "No services found" });
     }
 
-    const totalPages = Math.ceil(totalServices / limit);
+    const totalPages = isAdmin ? Math.ceil(totalServices / limit) : 1;
 
     res.status(200).json({
-      currentPage: page,
-      totalPages: totalPages,
+      currentPage: isAdmin ? page : null,
+      totalPages: isAdmin ? totalPages : null,
       totalServices: totalServices,
       services: services,
     });
@@ -895,7 +900,7 @@ exports.getProfileList = async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
   const search_value = req.query.search_value || "";
-
+  const { from_date, to_date } = req.query;
   try {
     let filter = {};
     let registeredServiceIds = [];
@@ -944,7 +949,24 @@ exports.getProfileList = async (req, res) => {
       filter.serviceId = { $in: matchingServiceIds };
     }
 
-    const listProfile = await Profile.find(filter)
+    // Bộ lọc theo form_date và to_date (ngày tháng)
+    if (from_date && to_date) {
+      const startDate = moment
+        .utc(from_date, "DD/MM/YYYY")
+        .startOf("day")
+        .toDate();
+      const endDate = moment.utc(to_date, "DD/MM/YYYY").endOf("day").toDate();
+
+      serviceQuery.createdAt = {
+        $gte: startDate,
+        $lte: endDate,
+      };
+    }
+
+    // Kết hợp serviceQuery vào filter để lọc theo ngày
+    const finalFilter = { ...filter, ...serviceQuery };
+
+    const listProfile = await Profile.find(finalFilter)
       .populate([
         {
           path: "serviceId",
@@ -960,7 +982,7 @@ exports.getProfileList = async (req, res) => {
       .limit(limit);
 
     // Lấy tổng số dịch vụ để tính tổng số trang
-    const totalProfiles = await Profile.countDocuments(filter);
+    const totalProfiles = await Profile.countDocuments(finalFilter);
 
     // Tính tổng số trang
     const totalPages = Math.ceil(totalProfiles / limit);
