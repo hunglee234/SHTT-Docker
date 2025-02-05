@@ -15,7 +15,6 @@ dayjs.extend(customParseFormat);
 exports.getMe = async (req, res) => {
   try {
     const userId = req.user.id;
-    console.log(userId);
     // Lấy thông tin tài khoản hiện tại
     const account = await Account.findById(userId).populate("role");
     if (!account) {
@@ -44,9 +43,9 @@ exports.getMe = async (req, res) => {
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
-      dateOfBirth: staff.dateOfBirth,
-      gender: staff.gender,
       joinDate: staff.joinDate,
+      gender: staff.gender,
+      website: staff.website,
     };
     // Trả về dữ liệu cho client
     res.status(200).json(responseData);
@@ -110,25 +109,25 @@ exports.updateMe = async (req, res) => {
       staffAccount.phone = phone;
     }
 
-    if (email && email !== staffAccount.account.email) {
+    if (email && email !== account.email) {
       const existingEmail = await Account.findOne({ email });
       if (existingEmail) {
         return res.status(400).json({
           message: "Email đã tồn tại!",
         });
       }
-      staffAccount.account.email = email;
+      account.email = email;
     }
 
     // Kiểm tra username có tồn tại không
-    if (username && username !== staffAccount.account.username) {
+    if (username && username !== account.username) {
       const existingUsername = await Account.findOne({ username });
       if (existingUsername) {
         return res.status(400).json({
           message: "Username đã tồn tại!",
         });
       }
-      staffAccount.account.username = username;
+      account.username = username;
     }
 
     // Chuyển đổi chuỗi ngày tháng từ định dạng DD/MM/YYYY thành đối tượng Date

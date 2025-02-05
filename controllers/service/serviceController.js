@@ -65,7 +65,9 @@ exports.createService = async (req, res) => {
     const procedure = await Procedure.findById(procedure_id);
 
     if (!procedure) {
-      return res.status(404).json({ error: "Thủ tục hướng dẫn không tồn tại." });
+      return res
+        .status(404)
+        .json({ error: "Thủ tục hướng dẫn không tồn tại." });
     }
 
     const createdBy = account._id;
@@ -80,7 +82,7 @@ exports.createService = async (req, res) => {
       image: imageId || null,
       createdBy,
       procedure: procedure._id,
-      formName
+      formName,
     });
 
     const savedService = await newService.save();
@@ -132,7 +134,7 @@ exports.getAllServices = async (req, res) => {
         select: "fullName",
       })
       .populate({
-        path: "procedure"
+        path: "procedure",
       })
       .exec();
 
@@ -530,6 +532,7 @@ exports.registerService = async (req, res) => {
     // console.log("Chứa thông tin quản lý của tài khoản này", savedService);
     // Tạo hồ sơ mới
     // phải thêm serviceId vào newProfile
+
     const newProfile = new Profile({
       registeredService: savedService._id,
       serviceId: service._id,
@@ -885,24 +888,22 @@ exports.updateDetailsProfile = async (req, res) => {
 };
 
 // Lấy danh sách dịch vụ
-// Nhân viên xem được các dịch vụ mình chịu trách nhiệm
-// Nhân viên và cộng tác viên xem được dịch vụ mình đăng ký
-// Manager và Admin xem được hết
-
-// Thêm search vào getProfileList
 exports.getProfileList = async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const skip = (page - 1) * limit;
+  const search_value = req.query.search_value || "";
+
   try {
     let filter = {};
     let registeredServiceIds = [];
+    let serviceQuery = {};
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
@@ -925,17 +926,38 @@ exports.getProfileList = async (req, res) => {
       filter = { registeredService: { $in: registeredServiceIds } };
     }
 
-    const listProfile = await Profile.find(filter).populate([
-      {
-        path: "serviceId",
-        select: "serviceName description formName",
-        populate: { path: "category", select: "categoryName" },
-      },
-      {
-        path: "image",
-        select: "url",
-      },
-    ]);
+    if (
+      search_value &&
+      search_value.trim() !== "" &&
+      search_value.trim() !== '""'
+    ) {
+      const cleanSearchValue = search_value.replace(/"/g, "").trim();
+
+      // 🔎 Truy vấn danh sách Service có serviceName khớp với search_value
+      const matchingServices = await Service.find({
+        serviceName: { $regex: cleanSearchValue, $options: "i" },
+      }).select("_id");
+
+      const matchingServiceIds = matchingServices.map((service) => service._id);
+
+      // ✅ Thêm điều kiện lọc theo serviceId
+      filter.serviceId = { $in: matchingServiceIds };
+    }
+
+    const listProfile = await Profile.find(filter)
+      .populate([
+        {
+          path: "serviceId",
+          select: "serviceName description formName",
+          populate: { path: "category", select: "categoryName" },
+        },
+        {
+          path: "image",
+          select: "url",
+        },
+      ])
+      .skip(skip)
+      .limit(limit);
 
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(filter);
@@ -973,7 +995,7 @@ exports.getProfileDetails = async (req, res) => {
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
@@ -1056,14 +1078,15 @@ exports.getProfileDetails = async (req, res) => {
 exports.deleteProfile = async (req, res) => {
   const userId = req.user.id;
   const userRole = req.user.role;
-  const { profileId } = req.params || { profileId: null };
+  const { profileId } = req.params;
+
+  if (!profileId) {
+    return res.status(400).json({ message: "Thiếu ID hồ sơ." });
+  }
 
   try {
-    // Kiểm tra quyền truy cập: chỉ Admin hoặc Manager được phép xóa
     if (!["SuperAdmin", "Manager"].includes(userRole)) {
-      return res.status(403).json({
-        message: "Bạn không có quyền xóa hồ sơ.",
-      });
+      return res.status(403).json({ message: "Bạn không có quyền xóa hồ sơ." });
     }
 
     let filter = { _id: profileId };
@@ -1076,20 +1099,20 @@ exports.deleteProfile = async (req, res) => {
       }
 
       registeredServiceIds = profile.registeredService;
-      const CustomerServices = await RegisteredService.find({
-        _id: { $in: registeredServiceIds },
-      });
+    } else if (userRole === "Manager") {
+      const [profile, managedServices] = await Promise.all([
+        Profile.findById(profileId),
+        RegisteredService.find({
+          $or: [{ managerUserId: userId }, { createdUserId: userId }],
+        }),
+      ]);
 
-      registeredServiceIds = CustomerServices.map((service) => service._id);
-    }
+      if (!profile) {
+        return res.status(404).json({ message: "Hồ sơ không tồn tại." });
+      }
 
-    if (userRole === "Manager") {
-      const managedServices = await RegisteredService.find({
-        $or: [{ managerUserId: userId }, { createdUserId: userId }],
-      });
-
-      // console.log("a", managedServices);
       registeredServiceIds = managedServices.map((service) => service._id);
+
       filter = {
         ...filter,
         $or: [
@@ -1097,38 +1120,26 @@ exports.deleteProfile = async (req, res) => {
           { createdBy: userId },
         ],
       };
+
+      if (profile.status !== "Chờ duyệt") {
+        return res.status(400).json({
+          message: "Chỉ có thể xóa hồ sơ khi trạng thái là 'Chờ duyệt'.",
+        });
+      }
     }
 
-    // Kiểm tra nếu không có dịch vụ nào liên quan
-    if (!registeredServiceIds.length) {
-      return res.status(404).json({
-        message: "Không có dịch vụ nào để xóa.",
-      });
-    }
-
-    // Tìm danh sách hồ sơ liên quan
     const profilesToDelete = await Profile.find(filter);
-    // Nếu không có hồ sơ nào liên quan
     if (!profilesToDelete.length) {
       return res.status(404).json({
-        message: "Không tìm thấy hồ sơ nào liên quan để xóa.",
+        message: "Không tìm thấy hồ sơ nào để xóa.",
       });
     }
 
-    // Kiểm tra trạng thái của hồ sơ (áp dụng cho Manager )
-    if (
-      ["Manager"].includes(userRole) &&
-      profilesToDelete.some((profile) => profile.status !== "Chờ duyệt")
-    ) {
-      return res.status(400).json({
-        message: "Chỉ có thể xóa hồ sơ khi trạng thái là 'Chờ duyệt'.",
-      });
-    }
+    await Promise.all([
+      RegisteredService.deleteOne({ _id: { $in: registeredServiceIds } }),
+      Profile.deleteOne(filter),
+    ]);
 
-    await RegisteredService.deleteMany({ _id: { $in: registeredServiceIds } });
-    await Profile.deleteMany(filter);
-
-    // // Phản hồi thành công
     return res.status(200).json({
       message: "Hồ sơ và các dịch vụ đã đăng ký đã được xóa thành công.",
     });
