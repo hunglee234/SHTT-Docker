@@ -17,6 +17,11 @@ const infoSchema = new mongoose.Schema({
   fields: { type: [fieldSchema], required: true },
 });
 
+const OwnerLetterSchema = new mongoose.Schema({
+  companyName: { type: String, required: true },
+  address: { type: String, required: true },
+});
+
 // Cập nhật schema chính của `Profile`
 const profileSchema = new mongoose.Schema(
   {
@@ -58,7 +63,7 @@ const profileSchema = new mongoose.Schema(
       ref: "Account",
       default: null,
     },
-    createdAt: {
+    createdDate: {
       type: Date,
       default: Date.now,
     },
@@ -87,6 +92,10 @@ const profileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "File",
       default: null,
+    },
+    represent: {
+      type: OwnerLetterSchema,
+      required: false,
     },
   },
   {

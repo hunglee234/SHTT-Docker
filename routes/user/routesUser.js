@@ -9,6 +9,7 @@ const regisService = require("../../routes/sevice/serviceRouter");
 const proceduresRoutes = require("../../routes/procedures/proceduresRoutes");
 const documentsUserRoutes = require("../../routes/documents/documentsUserRoutes");
 const notiRoutes = require("../../routes/noti/notiRoutes");
+const contractRoutes = require("../../routes/contract/contractRoutes");
 
 router.use("/category", categoryRoutes);
 
@@ -19,6 +20,8 @@ router.use("/ticket", ticketRoutes);
 router.use("/procedure", proceduresRoutes);
 
 router.use("/documents", documentsUserRoutes);
+
+router.use("/contract", contractRoutes);
 
 router.use("/noti", notiRoutes);
 // Lấy thông tin tài khoản

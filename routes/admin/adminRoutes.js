@@ -9,6 +9,7 @@ const customersRoutes = require("../../routes/admin/customers/customersRoutes");
 const accountRoutes = require("../../routes/admin/account/accountRoutes");
 const customerRoutes = require("../../routes/admin/customer/customerRoutes");
 const ticketRoutes = require("../../routes/admin/ticket/ticketRoutes");
+const contractRoutes = require("../../routes/admin/contract/contractRoutes");
 
 router.use("/category", categoryRoutes);
 
@@ -26,6 +27,7 @@ router.use("/customers", customersRoutes);
 
 router.use("/account", accountRoutes);
 
+router.use("/contract", contractRoutes);
 // Customer chính là Manager
 router.use("/customer", customerRoutes);
 

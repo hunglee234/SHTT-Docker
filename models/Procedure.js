@@ -6,7 +6,7 @@ const ProcedureSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    content: {
+    txtUrl: {
       type: String,
       required: false,
     },

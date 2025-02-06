@@ -4,10 +4,11 @@ const Account = require("../../models/Account/Account");
 exports.createProcedure = async (req, res) => {
   try {
     const nameProce = req.body.name || [];
-    const content = req.body.content || "";
+    const txtFile = req.file || {};
+    const txtId = txtFile.location;
     const procedure = await Procedure.create({
       name: nameProce,
-      content: content,
+      txtUrl: txtId,
     });
     res
       .status(201)
@@ -23,7 +24,9 @@ exports.createProcedure = async (req, res) => {
 exports.updateProcedure = async (req, res) => {
   const { procedureId } = req.params;
   const nameProce = req.body.name;
-  const content = req.body.content || "";
+  const txtFile = req.file || {};
+  const txtId = txtFile.location;
+
   try {
     const currentProcedure = await Procedure.findById(procedureId);
     if (!currentProcedure) {
@@ -32,7 +35,7 @@ exports.updateProcedure = async (req, res) => {
 
     const updatedData = {
       name: nameProce || currentProcedure.name,
-      content: content || currentProcedure.content,
+      txtUrl: txtId || currentProcedure.txtUrl,
     };
 
     const procedure = await Procedure.findByIdAndUpdate(
@@ -92,7 +95,7 @@ exports.getAllProcedures = async (req, res) => {
     }
 
     const procedures = await Procedure.find(procedureQuery).select(
-      "name content"
+      "name txtUrl"
     );
 
     res.status(200).json({
