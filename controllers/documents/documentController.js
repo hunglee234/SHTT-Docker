@@ -1,6 +1,6 @@
 const Document = require("../../models/Documents");
 const Account = require("../../models/Account/Account");
-// Thêm thủ tục
+// Thêm tài liệu
 exports.createDocument = async (req, res) => {
   try {
     const nameDocument = req.body.name || [];
@@ -20,7 +20,7 @@ exports.createDocument = async (req, res) => {
   }
 };
 
-// Sửa thủ tục
+// Sửa tài liệu
 exports.updateDocument = async (req, res) => {
   const { documentId } = req.params;
   const nameProce = req.body.name;

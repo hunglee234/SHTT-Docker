@@ -6,7 +6,11 @@ const upload = require("../../utils/multer");
 router.post("/", upload.single("txtFile"), ProcedureController.createProcedure);
 
 // Sửa thủ tục
-router.put("/:procedureId", ProcedureController.updateProcedure);
+router.put(
+  "/:procedureId",
+  upload.single("txtFile"),
+  ProcedureController.updateProcedure
+);
 
 // Xóa thủ tục
 router.delete("/:procedureId", ProcedureController.deleteProcedure);
