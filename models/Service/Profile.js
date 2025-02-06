@@ -63,7 +63,7 @@ const profileSchema = new mongoose.Schema(
       ref: "Account",
       default: null,
     },
-    createdAt: {
+    createdDate: {
       type: Date,
       default: Date.now,
     },
@@ -95,7 +95,7 @@ const profileSchema = new mongoose.Schema(
     },
     represent: {
       type: OwnerLetterSchema,
-      required: true,
+      required: false,
     },
   },
   {

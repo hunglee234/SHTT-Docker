@@ -612,6 +612,7 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     status,
     issueDate,
     expiryDate,
+    createdDate,
   } = req.body;
   try {
     const profile = await Profile.findOne({ _id: profileId });
@@ -665,6 +666,23 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     }
 
     updateField("status", status);
+
+    // cho phép update ngày nộp hồ sơ
+    if (createdDate) {
+      const formattedDate = moment(createdDate, "DD/MM/YYYY", true);
+      if (formattedDate.isValid()) {
+        profile.set("createdDate", formattedDate.toDate()); // Cho phép cập nhật createdAt
+        changes.push({
+          field: "createdDate",
+          oldValue: profile.createdDate,
+          newValue: formattedDate.toDate(),
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Ngày nộp hồ sơ không hợp lệ!" });
+      }
+    }
 
     await profile.save();
     if (changes.length === 0) {
