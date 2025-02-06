@@ -390,6 +390,8 @@ exports.registerServicebyAdmin = async (req, res) => {
         .status(500)
         .json({ message: "Không tìm thấy thông tin người quản lý dịch vụ!" });
     }
+
+    const infoRepresent = JSON.parse(req.body.represent || "[]");
     // Tạo tài liệu RegisteredService
     const newService = new RegisteredService({
       serviceId: service._id,
@@ -406,6 +408,7 @@ exports.registerServicebyAdmin = async (req, res) => {
       info: responseObject.info,
       createdBy: createdUserId,
       image: imageId || null,
+      represent: infoRepresent,
     });
     const savedProfile = await newProfile.save();
 
@@ -441,7 +444,7 @@ exports.registerServicebyAdmin = async (req, res) => {
         path: "image",
         select: "url",
       })
-      .select("_id status info");
+      .select("_id status info represent");
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({

@@ -4,10 +4,11 @@ const Account = require("../../models/Account/Account");
 exports.createProcedure = async (req, res) => {
   try {
     const nameProce = req.body.name || [];
-    const content = req.body.content || "";
+    const txtFile = req.file || {};
+    const txtId = txtFile.location;
     const procedure = await Procedure.create({
       name: nameProce,
-      content: content,
+      txtUrl: txtId,
     });
     res
       .status(201)
