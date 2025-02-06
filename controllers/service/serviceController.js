@@ -1007,6 +1007,7 @@ exports.getProfileList = async (req, res) => {
           select: "fullName",
         },
       ])
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -1269,6 +1270,7 @@ exports.getProfileSVByUserId = async (req, res) => {
     const profiles = await Profile.find({
       registeredService: { $in: serviceIds },
     })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .select("-info")
