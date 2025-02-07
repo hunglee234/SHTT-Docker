@@ -445,7 +445,7 @@ exports.registerServicebyAdmin = async (req, res) => {
         path: "image",
         select: "url",
       })
-      .select("_id status info represent");
+      .select("_id status info represent brand");
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -787,7 +787,7 @@ exports.updateDetailsProfile = async (req, res) => {
     // Tìm hồ sơ theo profileId
     const profile = await Profile.findOne(filter);
     // console.log("Profile", profile.createdBy);
-    console.log("a", profile);
+
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
     }
@@ -1022,7 +1022,7 @@ exports.getProfileList = async (req, res) => {
       const groupNames =
         profile.info
           ?.flatMap((item) => item.fields)
-          ?.filter((field) => field.name === "Tên nhóm")
+          ?.filter((field) => ["Nhóm dịch vụ", "Tên nhóm"].includes(field.name))
           ?.map((field) => field.value.replace("Nhóm ", "")) || []; // Chỉ lấy số nhóm
 
       const logo =
@@ -1324,7 +1324,6 @@ exports.getProfileSVByUserId = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .select("-info")
       .populate([
         {
           path: "registeredService",
@@ -1342,7 +1341,35 @@ exports.getProfileSVByUserId = async (req, res) => {
           path: "createdBy updatedBy",
           select: "fullName",
         },
-      ]);
+      ])
+      .lean(); // ⚡️ Chuyển về plain object giúp truy xuất nhanh hơn
+
+    // Xử lý dữ liệu sau khi truy vấn
+    const extractedData = profiles.map((profile) => {
+      // Trích xuất danh sách nhóm
+      const groupNames =
+        profile.info
+          ?.flatMap((item) => item.fields)
+          ?.filter((field) => ["Nhóm dịch vụ", "Tên nhóm"].includes(field.name))
+          ?.map((field) => field.value.replace("Nhóm ", "")) || [];
+
+      // Trích xuất logo (cả giá trị & kiểm tra có phải ảnh không)
+      const logo =
+        profile.info
+          ?.flatMap((item) => item.fields)
+          ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+          ?.map((field) => {
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
+            return { value: field.value, isImage };
+          }) || [];
+
+      const { info, ...restProfile } = profile;
+      return {
+        ...restProfile,
+        groupNames,
+        logo,
+      };
+    });
 
     const totalProfiles = await Profile.countDocuments({
       registeredService: { $in: serviceIds },
@@ -1356,7 +1383,7 @@ exports.getProfileSVByUserId = async (req, res) => {
         currentPage: page,
         totalPages: totalPages,
         totalProfiles: totalProfiles,
-        profiles: profiles,
+        profiles: extractedData,
       },
     });
   } catch (error) {
