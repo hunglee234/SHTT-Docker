@@ -1035,10 +1035,19 @@ exports.getProfileList = async (req, res) => {
             return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
           }) || [];
 
+      const owner = profile.info
+        ?.flatMap((item) => item.fields)
+        ?.filter((field) => field.name === "Tên chủ đơn")
+        .map((field) => field.value || ""); // Tránh lỗi nếu field.value không tồn tại
+
+      // Trả về profile nhưng loại bỏ info
+      const { info, ...restProfile } = profile;
+
       return {
-        ...profile,
+        ...restProfile,
         groupNames,
-        logo, // Danh sách nhóm lấy được
+        logo,
+        owner, // Danh sách nhóm lấy được
       };
     });
 
@@ -1138,9 +1147,15 @@ exports.getProfileDetails = async (req, res) => {
           return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
         }) || [];
 
+    const owner = profile.info
+      ?.flatMap((item) => item.fields)
+      ?.filter((field) => field.name === "Tên chủ đơn")
+      .map((field) => field.value || ""); // Tránh lỗi nếu field.value không tồn tại
+
     const extractedData = {
       ...profile,
-      logo, // Danh sách nhóm lấy được
+      logo,
+      owner, // Danh sách nhóm lấy được
     };
 
     const infoCustomer = await StaffAccount.findOne({
@@ -1361,10 +1376,16 @@ exports.getProfileSVByUserId = async (req, res) => {
             return { value: field.value, isImage };
           }) || [];
 
+      const owner = profile.info
+        ?.flatMap((item) => item.fields)
+        ?.filter((field) => field.name === "Tên chủ đơn")
+        .map((field) => field.value || ""); // Tránh lỗi nếu field.value không tồn tại
+
       return {
         ...profile,
         groupNames,
         logo,
+        owner,
       };
     });
 
