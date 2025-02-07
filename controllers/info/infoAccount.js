@@ -46,6 +46,7 @@ exports.getMe = async (req, res) => {
       joinDate: staff.joinDate,
       gender: staff.gender,
       website: staff.website,
+      companyName: staff.companyName,
     };
     // Trả về dữ liệu cho client
     res.status(200).json(responseData);
