@@ -1035,10 +1035,8 @@ exports.getProfileList = async (req, res) => {
             return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
           }) || [];
 
-      const { info, ...restProfile } = profile;
-
       return {
-        ...restProfile,
+        ...profile,
         groupNames,
         logo, // Danh sách nhóm lấy được
       };
@@ -1363,9 +1361,8 @@ exports.getProfileSVByUserId = async (req, res) => {
             return { value: field.value, isImage };
           }) || [];
 
-      const { info, ...restProfile } = profile;
       return {
-        ...restProfile,
+        ...profile,
         groupNames,
         logo,
       };
