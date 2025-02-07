@@ -343,7 +343,7 @@ exports.registerServicebyAdmin = async (req, res) => {
     // console.log("Đây là id dịch vụ theo form ", service._id);
 
     const infoData = JSON.parse(req.body.info || "[]");
-
+    const infoBrand = req.body.brand;
     const galleryFiles = req.files.gallery || [];
 
     let imageId = null;
@@ -409,6 +409,7 @@ exports.registerServicebyAdmin = async (req, res) => {
       createdBy: createdUserId,
       image: imageId || null,
       represent: infoRepresent,
+      brand: infoBrand,
     });
     const savedProfile = await newProfile.save();
 
@@ -532,7 +533,7 @@ exports.registerService = async (req, res) => {
     }
 
     const infoRepresent = JSON.parse(req.body.represent || "[]");
-
+    const infoBrand = req.body.brand;
     // Tạo tài liệu RegisteredService
     const newService = new RegisteredService({
       serviceId: service._id,
@@ -551,6 +552,7 @@ exports.registerService = async (req, res) => {
       createdBy: createdUserId,
       image: imageId || null,
       represent: infoRepresent,
+      brand: infoBrand,
     });
     const savedProfile = await newProfile.save();
 
@@ -586,7 +588,7 @@ exports.registerService = async (req, res) => {
         path: "image",
         select: "url",
       })
-      .select("_id status info represent");
+      .select("_id status info represent brand");
     // Kiểm tra nếu không tìm thấy profile
     if (!fullProfile) {
       return res.status(404).json({
@@ -756,7 +758,7 @@ exports.updateDetailsProfile = async (req, res) => {
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
@@ -785,7 +787,7 @@ exports.updateDetailsProfile = async (req, res) => {
     // Tìm hồ sơ theo profileId
     const profile = await Profile.findOne(filter);
     // console.log("Profile", profile.createdBy);
-
+    console.log("a", profile);
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
     }
@@ -795,7 +797,7 @@ exports.updateDetailsProfile = async (req, res) => {
     const updatedInfo = JSON.parse(req.body.info || "[]"); // Lấy thông tin mới từ request body
 
     const galleryFiles = req.files.gallery || [];
-
+    const infoBrand = req.body.brand;
     const infoRepresent = JSON.parse(req.body.represent || "[]");
     let imageId = null;
     if (req.files.image && req.files.image[0].mimetype.includes("image")) {
@@ -861,7 +863,7 @@ exports.updateDetailsProfile = async (req, res) => {
     profile.info = updatedInfo;
 
     profile.represent = infoRepresent;
-
+    profile.brand = infoBrand;
     if (imageId) {
       profile.image = imageId;
     }
@@ -1012,7 +1014,35 @@ exports.getProfileList = async (req, res) => {
       ])
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean();
+
+    // xử lý mảng Trích xuất "Tên nhóm" từ info
+    const extractedData = listProfile.map((profile) => {
+      const groupNames =
+        profile.info
+          ?.flatMap((item) => item.fields)
+          ?.filter((field) => field.name === "Tên nhóm")
+          ?.map((field) => field.value.replace("Nhóm ", "")) || []; // Chỉ lấy số nhóm
+
+      const logo =
+        profile.info
+          ?.flatMap((item) => item.fields)
+          ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+          ?.map((field) => {
+            // Kiểm tra xem giá trị có phải là URL hình ảnh không
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
+            return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
+          }) || [];
+
+      const { info, ...restProfile } = profile;
+
+      return {
+        ...restProfile,
+        groupNames,
+        logo, // Danh sách nhóm lấy được
+      };
+    });
 
     // Lấy tổng số dịch vụ để tính tổng số trang
     const totalProfiles = await Profile.countDocuments(finalFilter);
@@ -1022,7 +1052,7 @@ exports.getProfileList = async (req, res) => {
 
     return res.status(200).json({
       message: "Danh sách hồ sơ: ",
-      data: listProfile,
+      data: extractedData,
       pagination: {
         currentPage: page,
         totalPages,
@@ -1038,7 +1068,7 @@ exports.getProfileList = async (req, res) => {
   }
 };
 
-// Chi tiết Hồ sơ
+// Chi tiết Hồ sơ aaaa
 exports.getProfileDetails = async (req, res) => {
   const { profileId } = req.params;
   const userId = req.user.id;
@@ -1077,25 +1107,43 @@ exports.getProfileDetails = async (req, res) => {
     }
 
     // Tìm Profile theo profileId và lọc các dịch vụ của userId trong registeredService
-    const profile = await Profile.findOne(filter).populate([
-      {
-        path: "serviceId",
-        select: "serviceName description formName",
-        populate: { path: "category", select: "categoryName" },
-      },
-      {
-        path: "processes",
-        select: "processContent completionDate pdfUrl status",
-      },
-      {
-        path: "image",
-        select: "url",
-      },
-      {
-        path: "createdBy updatedBy",
-        select: "fullName",
-      },
-    ]);
+    const profile = await Profile.findOne(filter)
+      .populate([
+        {
+          path: "serviceId",
+          select: "serviceName description formName",
+          populate: { path: "category", select: "categoryName" },
+        },
+        {
+          path: "processes",
+          select: "processContent completionDate pdfUrl status",
+        },
+        {
+          path: "image",
+          select: "url",
+        },
+        {
+          path: "createdBy updatedBy",
+          select: "fullName",
+        },
+      ])
+      .lean();
+
+    // xử lý mảng Trích xuất "logo" từ info
+    const logo =
+      profile.info
+        ?.flatMap((item) => item.fields)
+        ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+        ?.map((field) => {
+          // Kiểm tra xem giá trị có phải là URL hình ảnh không
+          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
+          return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
+        }) || [];
+
+    const extractedData = {
+      ...profile,
+      logo, // Danh sách nhóm lấy được
+    };
 
     const infoCustomer = await StaffAccount.findOne({
       account: profile.createdBy,
@@ -1114,7 +1162,7 @@ exports.getProfileDetails = async (req, res) => {
     return res.status(200).json({
       message: "Thông tin chi tiết hồ sơ :",
       data: {
-        profile: profile,
+        profile: extractedData,
         createdByInfo: infoCustomer,
       },
     });

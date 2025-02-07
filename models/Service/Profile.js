@@ -39,6 +39,10 @@ const profileSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    brand: {
+      type: String,
+      default: "",
+    },
     issueDate: {
       type: Date,
       default: Date.now,
