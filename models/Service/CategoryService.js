@@ -17,19 +17,6 @@ const categoryServiceSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-
-    // Ngày tạo
-    createdAt: {
-      type: Date,
-      default: Date.now,
-    },
-
-    // Ngày chỉnh sửa
-    updatedAt: {
-      type: Date,
-      default: Date.now,
-    },
-
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",

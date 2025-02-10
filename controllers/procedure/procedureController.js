@@ -94,9 +94,9 @@ exports.getAllProcedures = async (req, res) => {
       procedureQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const procedures = await Procedure.find(procedureQuery).select(
-      "name txtUrl"
-    );
+    const procedures = await Procedure.find(procedureQuery)
+      .select("name txtUrl createdAt")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       message: "Danh sách thủ tục:",

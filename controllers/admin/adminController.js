@@ -147,12 +147,13 @@ exports.getFullAccountList = async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
 
-    const staffAccounts = await StaffAccount.find().populate({
-      path: "account",
-      select: "fullName email username avatar role",
-      populate: { path: "role", select: "name" }, // Giả sử role là một tài liệu được populate
-    });
-
+    const staffAccounts = await StaffAccount.find()
+      .populate({
+        path: "account",
+        select: "fullName email username avatar role",
+        populate: { path: "role", select: "name" }, // Giả sử role là một tài liệu được populate
+      })
+      .sort({ createdAt: -1 });
     // Lọc ra các tài khoản có vai trò "Admin"
 
     const filteredAccounts = staffAccounts.filter(

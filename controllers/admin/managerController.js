@@ -129,7 +129,6 @@ exports.createStaff = async (req, res) => {
       select: "url", // Chỉ lấy trường url trong Avatar
     });
 
-    console.log(accountWithAvatar);
     const avatarUrl = accountWithAvatar.avatar?.url || null;
 
     // Dữ liệu trả về cho client

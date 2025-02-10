@@ -145,6 +145,7 @@ exports.getAllContractsByUserId = async (req, res) => {
 
     // Tìm các hợp đồng theo userId
     const contracts = await Contract.find(contractQuery)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate([
@@ -152,7 +153,8 @@ exports.getAllContractsByUserId = async (req, res) => {
           path: "createdBy customerId",
           select: "fullName",
         },
-      ]);
+      ])
+      .lean();
 
     const totalContracts = await Contract.countDocuments(contractQuery);
     const totalPages = Math.ceil(totalContracts / limit);
@@ -229,12 +231,15 @@ exports.getContractsByUserId = async (req, res) => {
       contractQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const listContract = await Contract.find(contractQuery).populate([
-      {
-        path: "createdBy customerId",
-        select: "fullName",
-      },
-    ]);
+    const listContract = await Contract.find(contractQuery)
+      .sort({ createdAt: -1 })
+      .populate([
+        {
+          path: "createdBy customerId",
+          select: "fullName",
+        },
+      ])
+      .lean();
 
     res.status(200).json({
       message: "Danh sách hợp đồng theo UserId:",

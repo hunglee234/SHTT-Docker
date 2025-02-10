@@ -93,7 +93,9 @@ exports.getAllDocuments = async (req, res) => {
       DocumentQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const Documents = await Document.find(DocumentQuery);
+    const Documents = await Document.find(DocumentQuery).sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       message: "Danh sách tài liệu:",
