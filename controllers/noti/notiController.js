@@ -14,11 +14,17 @@ exports.getNotiList = async (req, res) => {
 
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
-        managerUserId: userId,
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
       const managedServiceIds = managedServices.map((service) => service._id);
 
-      filter = { registeredService: { $in: managedServiceIds } };
+      // Lọc các hồ sơ mà manager quản lý hoặc họ tạo
+      filter = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
     } else if (userRole === "Staff" || userRole === "Collaborator") {
       const listRegisteredServices = await RegisteredService.find({
         createdUserId: userId,
