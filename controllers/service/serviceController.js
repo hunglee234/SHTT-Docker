@@ -139,7 +139,7 @@ exports.getAllServices = async (req, res) => {
     // Chỉ phân trang nếu là Admin
     if (isAdmin) {
       const skip = (page - 1) * limit;
-      query = query.skip(skip).limit(parseInt(limit));
+      query = query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
     }
 
     const services = await query.exec();
@@ -1021,33 +1021,34 @@ exports.getProfileList = async (req, res) => {
     const extractedData = listProfile.map((profile) => {
       const groupNames =
         profile.info
-          ?.flatMap((item) => item.fields)
-          ?.filter((field) => ["Nhóm dịch vụ", "Tên nhóm"].includes(field.name))
+          ?.flatMap((item) => item.fields || []) // Đảm bảo item.fields là mảng
+          ?.filter(
+            (field) =>
+              field && ["Nhóm dịch vụ", "Tên nhóm"].includes(field.name)
+          ) // Kiểm tra field tồn tại
           ?.map((field) => field.value.replace("Nhóm ", "")) || []; // Chỉ lấy số nhóm
 
       const logo =
         profile.info
-          ?.flatMap((item) => item.fields)
-          ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+          ?.flatMap((item) => item.fields || []) // Đảm bảo item.fields là mảng
+          ?.filter((field) => field && field.name === "Mẫu logo, nhãn hiệu") // Kiểm tra field tồn tại
           ?.map((field) => {
-            // Kiểm tra xem giá trị có phải là URL hình ảnh không
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
-            return { value: field.value, isImage }; // Trả về cả giá trị lẫn trạng thái boolean
+            return { value: field.value, isImage };
           }) || [];
 
       const owner = profile.info
-        ?.flatMap((item) => item.fields)
-        ?.filter((field) => field.name === "Tên chủ đơn")
-        .map((field) => field.value || ""); // Tránh lỗi nếu field.value không tồn tại
+        ?.flatMap((item) => item.fields || []) // Đảm bảo item.fields là mảng
+        ?.filter((field) => field && field.name === "Tên chủ đơn") // Kiểm tra field tồn tại
+        ?.map((field) => field.value || ""); // Tránh lỗi nếu field.value không tồn tại
 
-      // Trả về profile nhưng loại bỏ info
       const { info, ...restProfile } = profile;
 
       return {
         ...restProfile,
         groupNames,
         logo,
-        owner, // Danh sách nhóm lấy được
+        owner,
       };
     });
 

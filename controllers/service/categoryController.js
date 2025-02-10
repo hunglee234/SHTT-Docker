@@ -55,8 +55,10 @@ exports.getAllCategory = async (req, res) => {
     }
     const skip = (page - 1) * limit;
     const categories = await CategoryService.find(categoryQuery)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
+      .lean()
       .exec();
 
     const totalCategories = await CategoryService.countDocuments(categoryQuery);

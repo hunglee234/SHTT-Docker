@@ -84,8 +84,10 @@ exports.getAllTickets = async (req, res) => {
     // Lấy tickets từ cơ sở dữ liệu theo query đã xây dựng
     const skip = (page - 1) * limit;
     const tickets = await Ticket.find(ticketsQuery)
+      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean();
 
     const totalTickets = await Ticket.countDocuments(ticketsQuery);
     const totalPages = Math.ceil(totalTickets / limit);

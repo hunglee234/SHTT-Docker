@@ -17,13 +17,17 @@ exports.listCustomers = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit));
     const accountIds = accounts.map((account) => account._id);
+
     const infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
       .populate("account", "fullName email")
       .populate({
         path: "avatar",
         select: "url",
       })
+      .sort({ createdAt: -1 })
+      .select("createdAt staffCode phone status account avatar")
       .lean();
+
     const result = infoStaffs.map((infoStaff) => ({
       accountId: infoStaff.account._id,
       avatar: infoStaff.avatar,
@@ -31,7 +35,7 @@ exports.listCustomers = async (req, res) => {
       email: infoStaff.account.email,
       staffCode: infoStaff.staffCode,
       phone: infoStaff.phone,
-      joinDate: infoStaff.joinDate,
+      joinDate: infoStaff.createdAt,
       status: infoStaff.status,
     }));
     // Tổng số lượng tài khoản
@@ -82,7 +86,10 @@ exports.listCustomersSearch = async (req, res) => {
         path: "avatar",
         select: "url",
       })
+      .sort({ createdAt: -1 })
+      .select("createdAt staffCode phone status account avatar")
       .lean();
+
     const result = infoStaffs.map((infoStaff) => ({
       accountId: infoStaff.account._id,
       avatar: infoStaff.avatar,
@@ -90,7 +97,7 @@ exports.listCustomersSearch = async (req, res) => {
       email: infoStaff.account.email,
       staffCode: infoStaff.staffCode,
       phone: infoStaff.phone,
-      joinDate: infoStaff.joinDate,
+      joinDate: infoStaff.createdAt,
       status: infoStaff.status,
       createdDate: infoStaff.account.createdDate,
     }));
