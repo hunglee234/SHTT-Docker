@@ -215,6 +215,7 @@ exports.updateService = async (req, res) => {
       serviceCode,
       price,
       status,
+      procedure_id,
     } = req.body;
 
     let imageId = null;
@@ -264,6 +265,7 @@ exports.updateService = async (req, res) => {
         notes,
         image: imageId || null,
         updatedBy,
+        procedure: procedure_id,
       },
       { new: true, runValidators: true }
     );
