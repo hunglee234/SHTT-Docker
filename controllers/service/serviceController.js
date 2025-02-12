@@ -246,7 +246,6 @@ exports.updateService = async (req, res) => {
         .json({ error: "Permission denied. User is not an Admin." });
     }
 
-    console.log(categoryname);
     // check Category Name
     const categoryExists = await CategoryService.findOne({
       categoryName: categoryname,
@@ -257,7 +256,7 @@ exports.updateService = async (req, res) => {
     }
 
     const updatedBy = account._id;
-    console.log(updatedBy);
+
     const updatedService = await Service.findByIdAndUpdate(
       id,
       {
