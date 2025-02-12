@@ -215,9 +215,15 @@ exports.updateService = async (req, res) => {
       serviceCode,
       price,
       status,
+      procedure_id,
     } = req.body;
 
-    let imageId = null;
+    const existingService = await Service.findById(id);
+    if (!existingService) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    let imageId = existingService.image;
     if (req.file) {
       const imageUrl = req.file.location;
       const fileType = req.file.mimetype.includes("image") ? "image" : "pdf";
@@ -240,7 +246,6 @@ exports.updateService = async (req, res) => {
         .json({ error: "Permission denied. User is not an Admin." });
     }
 
-    console.log(categoryname);
     // check Category Name
     const categoryExists = await CategoryService.findOne({
       categoryName: categoryname,
@@ -251,7 +256,7 @@ exports.updateService = async (req, res) => {
     }
 
     const updatedBy = account._id;
-    console.log(updatedBy);
+
     const updatedService = await Service.findByIdAndUpdate(
       id,
       {
@@ -262,8 +267,9 @@ exports.updateService = async (req, res) => {
         category: categoryExists._id,
         description,
         notes,
-        image: imageId || null,
+        image: imageId,
         updatedBy,
+        procedure: procedure_id,
       },
       { new: true, runValidators: true }
     );

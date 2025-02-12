@@ -43,7 +43,7 @@ exports.getMe = async (req, res) => {
       phone: staff.phone,
       address: staff.address,
       staffCode: staff.staffCode,
-      joinDate: staff.joinDate,
+      joinDate: staff.joinDate || staff.account.createdAt,
       gender: staff.gender,
       website: staff.website,
       companyName: staff.companyName,

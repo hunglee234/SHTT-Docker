@@ -11,19 +11,6 @@ const upload = multer({
       cb(null, fileName);
     },
   }),
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "application/pdf",
-      "text/plain",
-    ];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Chỉ cho phép upload file PDF, hình ảnh và TXT!"), false);
-    }
-  },
 });
 
 module.exports = upload;
