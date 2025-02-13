@@ -88,21 +88,21 @@ exports.login2 = async (req, res) => {
 };
 
 // Hàm tạo mã khách hàng tự động
-function generateCustomerCode(lastCode, length = 2) {
-  const prefix = "KH"; // Tiền tố cố định
-  let numberPart = 1; // Giá trị mặc định nếu không có mã trước đó
+function generateCustomerCode(lastCode) {
+  const prefix = "KH";
+  let numberPart = 1;
+  let length = 2;
 
-  // Kiểm tra nếu lastCode hợp lệ
   if (lastCode) {
     const match = lastCode.match(/^KH(\d+)$/);
     if (match) {
       numberPart = parseInt(match[1], 10) + 1;
+      length = Math.max(match[1].length, 2);
     } else {
       throw new Error("Mã khách hàng không hợp lệ");
     }
   }
 
-  // Định dạng số với độ dài tùy chỉnh (mặc định 2)
   const newCode = `${prefix}${String(numberPart).padStart(length, "0")}`;
   return newCode;
 }
@@ -111,7 +111,29 @@ exports.register = async (req, res) => {
   const { type } = req.body;
 
   try {
-    let lastCustomer = await StaffAccount.findOne().sort({ createdAt: -1 });
+    const managerRole = await Role.findOne({ name: "Manager" });
+    if (!managerRole) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Role 'Manager' không tồn tại." });
+    }
+
+    let accounts = await Account.find({ role: managerRole._id }).lean();
+    if (!accounts.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy Account nào có role Manager.",
+      });
+    }
+
+    const accountIds = accounts.map((acc) => acc._id);
+
+    const lastCustomer = await StaffAccount.findOne({
+      account: { $in: accountIds },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
     let lastCustomerCode = lastCustomer ? lastCustomer.staffCode : null;
     let newCustomerCode = generateCustomerCode(lastCustomerCode);
 
