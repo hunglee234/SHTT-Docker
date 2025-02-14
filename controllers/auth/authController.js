@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const Role = require("../../models/Role");
 const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
+const Counter = require("../../models/Counter");
 require("dotenv").config();
 const sendMail = require("../../controllers/email/emailController");
 const crypto = require("crypto");
@@ -87,55 +88,21 @@ exports.login2 = async (req, res) => {
   }
 };
 
-// Hàm tạo mã khách hàng tự động
-function generateCustomerCode(lastCode) {
-  const prefix = "KH";
-  let numberPart = 1;
-  let length = 2;
-
-  if (lastCode) {
-    const match = lastCode.match(/^KH(\d+)$/);
-    if (match) {
-      numberPart = parseInt(match[1], 10) + 1;
-      length = Math.max(match[1].length, 2);
-    } else {
-      throw new Error("Mã khách hàng không hợp lệ");
-    }
-  }
-
-  const newCode = `${prefix}${String(numberPart).padStart(length, "0")}`;
-  return newCode;
+async function getNextSequence(name) {
+  const counter = await Counter.findOneAndUpdate(
+    { name },
+    { $inc: { seq: 1 } },
+    { new: true, upsert: true }
+  );
+  return counter.seq;
 }
 
 exports.register = async (req, res) => {
   const { type } = req.body;
 
   try {
-    const managerRole = await Role.findOne({ name: "Manager" });
-    if (!managerRole) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Role 'Manager' không tồn tại." });
-    }
-
-    let accounts = await Account.find({ role: managerRole._id }).lean();
-    if (!accounts.length) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy Account nào có role Manager.",
-      });
-    }
-
-    const accountIds = accounts.map((acc) => acc._id);
-
-    const lastCustomer = await StaffAccount.findOne({
-      account: { $in: accountIds },
-    })
-      .sort({ createdAt: -1 })
-      .lean();
-
-    let lastCustomerCode = lastCustomer ? lastCustomer.staffCode : null;
-    let newCustomerCode = generateCustomerCode(lastCustomerCode);
+    const seqNumber = await getNextSequence("staff_code");
+    let newCustomerCode = `KH${String(seqNumber).padStart(2, "0")}`;
 
     if (type === "individual") {
       // Đăng ký tài khoản cá nhân
