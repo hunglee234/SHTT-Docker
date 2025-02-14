@@ -534,7 +534,6 @@ exports.deleteCustomer = async (req, res) => {
     if (!staffAccount) {
       return res.status(404).json({ message: "Khách hàng không tồn tại." });
     }
-    console.log(staffAccount);
 
     // // Xóa cả Account và StaffAccount
     await Account.findByIdAndDelete(currentUser._id);
