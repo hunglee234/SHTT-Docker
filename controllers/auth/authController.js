@@ -14,15 +14,23 @@ exports.login2 = async (req, res) => {
   try {
     let accountInfo = null;
     // Tìm MST hoặc SDT trong InfoAccount
-    if (/^(0[3|5|7|8|9])+([0-9]{8})$/.test(identifier)) {
-      accountInfo = await StaffAccount.findOne({ phone: identifier }).populate(
-        "account"
-      );
-    } else {
-      accountInfo = await StaffAccount.findOne({ MST: identifier }).populate(
-        "account"
-      );
+    async function getAccountInfo(identifier) {
+      let accountInfo = await StaffAccount.findOne({
+        phone: identifier,
+      }).populate("account");
+
+      // Nếu không tìm thấy theo phone, tiếp tục tìm theo MST
+      if (!accountInfo) {
+        accountInfo = await StaffAccount.findOne({ MST: identifier }).populate(
+          "account"
+        );
+      }
+
+      return accountInfo;
     }
+
+    // Sử dụng
+    accountInfo = await getAccountInfo(identifier);
 
     // Kiểm tra nếu không tìm thấy tài khoản
     if (!accountInfo || !accountInfo.account) {
