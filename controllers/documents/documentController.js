@@ -23,17 +23,17 @@ exports.createDocument = async (req, res) => {
 // Sửa tài liệu
 exports.updateDocument = async (req, res) => {
   const { documentId } = req.params;
-  const nameProce = req.body.name;
+  const nameDocument = req.body.name;
   const pdfFile = req.file || {};
   const pdfId = pdfFile.location || null;
   try {
     const currentDocument = await Document.findById(documentId);
     if (!currentDocument) {
-      return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
+      return res.status(404).json({ message: "Không tìm thấy tài liệu!" });
     }
 
     const updatedData = {
-      name: nameProce || currentDocument.name,
+      name: nameDocument || currentDocument.name,
       pdfUrl: pdfId || currentDocument.pdfUrl,
     };
 
@@ -45,11 +45,11 @@ exports.updateDocument = async (req, res) => {
 
     res
       .status(200)
-      .json({ message: "Thủ tục được cập nhật thành công!", data: Documents });
+      .json({ message: "Tài liệu được cập nhật thành công!", data: Documents });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Lỗi khi cập nhật thủ tục!", error: error.message });
+      .json({ message: "Lỗi khi cập nhật tài liệu!", error: error.message });
   }
 };
 
@@ -64,17 +64,17 @@ exports.deleteDocument = async (req, res) => {
     }
 
     if (!account.role || account.role.name !== "SuperAdmin") {
-      return res.status(403).json({ error: "Bạn không có quyền xóa thủ tục" });
+      return res.status(403).json({ error: "Bạn không có quyền xóa bài viết" });
     }
     const Documents = await Document.findByIdAndDelete(documentId);
     if (!Documents) {
-      return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
+      return res.status(404).json({ message: "Không tìm thấy bài viết!" });
     }
-    res.status(200).json({ message: "Thủ tục đã được xóa thành công!" });
+    res.status(200).json({ message: "Bài viết đã được xóa thành công!" });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Lỗi khi xóa thủ tục!", error: error.message });
+      .json({ message: "Lỗi khi xóa bài viết!", error: error.message });
   }
 };
 
@@ -117,14 +117,15 @@ exports.getDocumentDetails = async (req, res) => {
   try {
     const Documents = await Document.findById(documentId);
     if (!Documents) {
-      return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
+      return res.status(404).json({ message: "Không tìm thấy bài viết!" });
     }
     res
       .status(200)
-      .json({ message: "Thông tin chi tiết thủ tục:", data: Documents });
+      .json({ message: "Thông tin chi tiết bài viết:", data: Documents });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Lỗi khi lấy chi tiết thủ tục!", error: error.message });
+    res.status(500).json({
+      message: "Lỗi khi lấy chi tiết bài viết!",
+      error: error.message,
+    });
   }
 };
