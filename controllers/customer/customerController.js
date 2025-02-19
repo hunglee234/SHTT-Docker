@@ -74,21 +74,46 @@ exports.listCustomersSearch = async (req, res) => {
         $lte: new Date(to_date).setHours(23, 59, 59, 999),
       };
     }
-    const accounts = await Account.find(query)
+
+    // const accounts = await Account.find(query)
+    //   .select("fullName email createdDate")
+    //   .sort({ createdDate: -1 })
+    //   .lean()
+    //   .skip((page - 1) * limit)
+    //   .limit(Number(limit));
+
+    let queryBuilder = Account.find(query)
       .select("fullName email createdDate")
-      .lean()
-      .skip((page - 1) * limit)
-      .limit(Number(limit));
+      .sort({ createdDate: -1 }) // Đảm bảo sắp xếp trước khi phân trang
+      .lean();
+
+    if (limit > 0) {
+      queryBuilder = queryBuilder.skip((page - 1) * limit).limit(limit);
+    }
+
+    const accounts = await queryBuilder;
     const accountIds = accounts.map((account) => account._id);
-    const infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
+
+    // const infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
+    //   .populate("account", "fullName email createdDate")
+    //   .populate({
+    //     path: "avatar",
+    //     select: "url",
+    //   })
+    //   .sort({ createdAt: -1 })
+    //   .select("createdAt staffCode phone status account avatar")
+    //   .lean();
+
+    let infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
       .populate("account", "fullName email createdDate")
-      .populate({
-        path: "avatar",
-        select: "url",
-      })
-      .sort({ createdAt: -1 })
+      .populate({ path: "avatar", select: "url" })
       .select("createdAt staffCode phone status account avatar")
       .lean();
+
+    infoStaffs = infoStaffs.sort(
+      (a, b) =>
+        new Date(b.account.createdDate) - new Date(a.account.createdDate)
+    );
 
     const result = infoStaffs.map((infoStaff) => ({
       accountId: infoStaff.account._id,
