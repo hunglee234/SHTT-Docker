@@ -37,7 +37,7 @@ const profileSchema = new mongoose.Schema(
     },
     dateActive: {
       type: Date,
-      default: Date.now,
+      default: null,
     },
     brand: {
       type: String,
@@ -45,11 +45,15 @@ const profileSchema = new mongoose.Schema(
     },
     issueDate: {
       type: Date,
-      default: Date.now,
+      default: null,
     },
     expiryDate: {
       type: Date,
-      default: Date.now,
+      default: null,
+    },
+    createdDate: {
+      type: Date,
+      default: null,
     },
     info: { type: [infoSchema], required: true },
     registeredService: {
@@ -66,10 +70,6 @@ const profileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Account",
       default: null,
-    },
-    createdDate: {
-      type: Date,
-      default: Date.now,
     },
     processes: [
       {
