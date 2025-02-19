@@ -4,11 +4,16 @@ const Account = require("../../models/Account/Account");
 exports.createProcedure = async (req, res) => {
   try {
     const nameProce = req.body.name || [];
-    const txtFile = req.file || {};
-    const txtId = txtFile.location;
+    const txtFile = req.files["txtFile"]
+      ? req.files["txtFile"][0].location
+      : null;
+
+    const otherFile = req.files["File"] ? req.files["File"][0].location : null;
+
     const procedure = await Procedure.create({
       name: nameProce,
-      txtUrl: txtId,
+      txtUrl: txtFile,
+      fileUrl: otherFile,
     });
     res
       .status(201)
@@ -24,8 +29,11 @@ exports.createProcedure = async (req, res) => {
 exports.updateProcedure = async (req, res) => {
   const { procedureId } = req.params;
   const nameProce = req.body.name;
-  const txtFile = req.file || {};
-  const txtId = txtFile.location;
+  const txtFile = req.files["txtFile"]
+    ? req.files["txtFile"][0].location
+    : null;
+
+  const otherFile = req.files["File"] ? req.files["File"][0].location : null;
 
   try {
     const currentProcedure = await Procedure.findById(procedureId);
@@ -35,7 +43,8 @@ exports.updateProcedure = async (req, res) => {
 
     const updatedData = {
       name: nameProce || currentProcedure.name,
-      txtUrl: txtId || currentProcedure.txtUrl,
+      txtUrl: txtFile || currentProcedure.txtUrl,
+      fileUrl: otherFile || currentProcedure.fileUrl,
     };
 
     const procedure = await Procedure.findByIdAndUpdate(
@@ -95,7 +104,7 @@ exports.getAllProcedures = async (req, res) => {
     }
 
     const procedures = await Procedure.find(procedureQuery)
-      .select("name txtUrl createdAt")
+      .select("name txtUrl fileUrl createdAt")
       .sort({ createdAt: -1 });
 
     res.status(200).json({

@@ -10,6 +10,10 @@ const ProcedureSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    fileUrl: {
+      type: String,
+      required: false,
+    },
   },
   { timestamps: true }
 );
