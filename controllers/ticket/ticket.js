@@ -132,6 +132,7 @@ exports.getTicketById = async (req, res) => {
     }
     if (
       user.role === "Admin" ||
+      user.role === "SuperAdmin" ||
       user.role === "Manager" ||
       user.role === "Employee" ||
       user.role === "Collaborator" ||
@@ -235,7 +236,7 @@ exports.deleteTicket = async (req, res) => {
     const user = req.user; // Lấy từ middleware xác thực
     const { id } = req.params;
 
-    if (user.role !== "Admin") {
+    if (user.role !== "SuperAdmin" && user.role !== "Admin") {
       return res
         .status(403)
         .json({ error: "Access denied. Only Admin can delete the ticket." });
