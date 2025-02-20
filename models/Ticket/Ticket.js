@@ -25,6 +25,7 @@ const TicketSchema = new mongoose.Schema(
       ref: "Account",
       default: null,
     },
+    profileID: { type: mongoose.Schema.Types.ObjectId, ref: "Profile" },
   },
   {
     timestamps: true,

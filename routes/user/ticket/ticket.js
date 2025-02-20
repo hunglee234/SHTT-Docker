@@ -3,7 +3,7 @@ const router = express.Router();
 const TicketController = require("../../../controllers/ticket/ticket");
 
 // Thêm Authenticate để bắt buộc phải login khi để lại ticket
-router.post("/create", TicketController.createTicket);
+router.post("/create/:profileID?", TicketController.createTicket);
 
 // Xem tất cả ticket
 

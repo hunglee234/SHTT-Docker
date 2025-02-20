@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const DocumentController = require("../../controllers/documents/documentController");
-const upload = require("../../utils/multer");
 
 // Xem danh sách tài liệu
 router.get("/", DocumentController.getAllDocuments);

@@ -107,7 +107,7 @@ exports.listCustomersSearch = async (req, res) => {
     let infoStaffs = await InfoStaff.find({ account: { $in: accountIds } })
       .populate("account", "fullName email createdDate")
       .populate({ path: "avatar", select: "url" })
-      .select("createdAt staffCode phone status account avatar")
+      .select("createdAt staffCode phone status account avatar companyName")
       .lean();
 
     infoStaffs = infoStaffs.sort(
@@ -125,6 +125,7 @@ exports.listCustomersSearch = async (req, res) => {
       joinDate: infoStaff.createdAt,
       status: infoStaff.status,
       createdDate: infoStaff.account.createdDate,
+      companyName: infoStaff.companyName,
     }));
     // Tổng số lượng tài khoản
     const totalItems = await Account.countDocuments(query);

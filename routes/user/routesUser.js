@@ -10,6 +10,7 @@ const proceduresRoutes = require("../../routes/procedures/proceduresRoutes");
 const documentsUserRoutes = require("../../routes/documents/documentsUserRoutes");
 const notiRoutes = require("../../routes/noti/notiRoutes");
 const contractRoutes = require("../../routes/contract/contractRoutes");
+const postRoutesUser = require("../../routes/post/postRoutesUser");
 
 router.use("/category", categoryRoutes);
 
@@ -20,6 +21,8 @@ router.use("/ticket", ticketRoutes);
 router.use("/procedure", proceduresRoutes);
 
 router.use("/documents", documentsUserRoutes);
+
+router.use("/posts", postRoutesUser);
 
 router.use("/contract", contractRoutes);
 

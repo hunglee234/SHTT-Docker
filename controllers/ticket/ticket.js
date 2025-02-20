@@ -5,7 +5,7 @@ const moment = require("moment");
 exports.createTicket = async (req, res) => {
   try {
     const { category, name, phoneNumber, email, message } = req.body;
-
+    const { profileID } = req.params;
     const userId = req.user.id;
     // Đầu vào của category là id
     const categoryData = await CategoryTicket.findById(category);
@@ -20,15 +20,24 @@ exports.createTicket = async (req, res) => {
     }
 
     const createdBy = userId;
+
     // Tạo ticket
-    const ticket = await Ticket.create({
+    const ticketData = {
       category,
       name,
       phoneNumber,
       email,
       message,
       createdBy,
-    });
+    };
+
+    // Nếu có profileID, thêm vào dữ liệu ticket
+    if (profileID) {
+      ticketData.profileID = profileID;
+    }
+
+    const ticket = await Ticket.create(ticketData);
+
     res.status(201).json({ message: "Ticket created successfully!", ticket });
   } catch (error) {
     console.error("Error creating ticket:", error);
@@ -123,6 +132,7 @@ exports.getTicketById = async (req, res) => {
     }
     if (
       user.role === "Admin" ||
+      user.role === "SuperAdmin" ||
       user.role === "Manager" ||
       user.role === "Employee" ||
       user.role === "Collaborator" ||
@@ -226,7 +236,7 @@ exports.deleteTicket = async (req, res) => {
     const user = req.user; // Lấy từ middleware xác thực
     const { id } = req.params;
 
-    if (user.role !== "Admin") {
+    if (user.role !== "SuperAdmin" && user.role !== "Admin") {
       return res
         .status(403)
         .json({ error: "Access denied. Only Admin can delete the ticket." });
