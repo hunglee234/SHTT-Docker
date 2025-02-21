@@ -732,11 +732,11 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     ]);
 
     const serviceName =
-      profileUpdatedByAdmin?.registeredService?.serviceId?.serviceName;
+      profileUpdatedByAdmin?.registeredService?.serviceId?.serviceName.toLowerCase();
 
     const newNoti = await Noti.create({
       profileId,
-      message: `Trạng thái hồ sơ ${serviceName} ${profileId} đã được cập nhật thông tin mới.`,
+      message: `Trạng thái hồ sơ ${serviceName} đã được cập nhật thông tin mới.`,
       status: "New",
     });
 
@@ -915,11 +915,11 @@ exports.updateDetailsProfile = async (req, res) => {
     ]);
 
     const serviceName =
-      fullProFileWithImage?.registeredService?.serviceId?.serviceName;
+      fullProFileWithImage?.registeredService?.serviceId?.serviceName.toLowerCase();
 
     const newNoti = await Noti.create({
       profileId,
-      message: `Hồ sơ ${serviceName} ${profileId} của bạn đã được cập nhật thông tin mới.`,
+      message: `Hồ sơ ${serviceName} của bạn đã được cập nhật thông tin mới.`,
       status: "New",
     });
 
