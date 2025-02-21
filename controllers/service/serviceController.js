@@ -15,7 +15,6 @@ const { populate } = require("../../models/Role");
 const moment = require("moment");
 const sendMail = require("../../controllers/email/emailController");
 const Procedure = require("../../models/Procedure");
-const logTime = require("../../utils/logTime");
 
 // CREATE
 exports.createService = async (req, res) => {
