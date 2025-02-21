@@ -379,6 +379,14 @@ exports.registerServicebyAdmin = async (req, res) => {
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
             const file = galleryFiles[index];
+
+            if (!file) {
+              return {
+                name: field.name,
+                value: null, // hoặc giá trị mặc định nếu cần
+                fieldType: field.fieldType, // giữ nguyên kiểu để tránh sai logic
+              };
+            }
             return {
               name: field.name,
               value: file.location,
@@ -520,6 +528,14 @@ exports.registerService = async (req, res) => {
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
             const file = galleryFiles[index];
+
+            if (!file) {
+              return {
+                name: field.name,
+                value: null, // hoặc giá trị mặc định nếu cần
+                fieldType: field.fieldType, // giữ nguyên kiểu để tránh sai logic
+              };
+            }
             return {
               name: field.name,
               value: file.location,
@@ -859,9 +875,13 @@ exports.updateDetailsProfile = async (req, res) => {
       newInfo.fields.forEach((newField, index) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
           const file = galleryFiles[index];
-          if (file) {
-            newField.value = file.location;
+          if (!file) {
+            newField.value = null;
+            return newField; // Trả về object đã cập nhật
           }
+
+          newField.value = file.location;
+          return newField;
         }
       });
     });
