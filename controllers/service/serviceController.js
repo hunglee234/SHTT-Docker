@@ -630,6 +630,12 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
     }
+    // Tìm email dựa theo UserId
+    const userMail = await Account.findOne({ _id: profile.createdBy });
+
+    if (!userMail) {
+      return res.status(404).json({ message: "Người dùng không tồn tại!" });
+    }
     // Cập nhật các trường bởi Admin
     const changes = [];
 
@@ -725,14 +731,15 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       },
     ]);
 
+    const serviceName =
+      profileUpdatedByAdmin?.registeredService?.serviceId?.serviceName.toLowerCase();
+
     const newNoti = await Noti.create({
       profileId,
-      message: `Trạng thái hồ sơ ${profileId} đã được cập nhật thông tin mới.`,
+      message: `Trạng thái hồ sơ ${serviceName} đã được cập nhật thông tin mới.`,
       status: "New",
     });
 
-    // Tìm email dựa theo UserId
-    const userMail = await Account.findOne({ _id: profile.createdBy });
     // Gửi thông báo khi thông tin khác thay đổi
     const emailSubject = "Trạng thái hồ sơ của bạn đã được cập nhật";
     const emailText = `Xin chào ${userMail.fullName},\n\nTrạng thái hồ sơ của bạn đã được cập nhật. \n\n Trạng thái hồ sơ hiện tại của bạn là ${status}. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
@@ -796,6 +803,13 @@ exports.updateDetailsProfile = async (req, res) => {
 
     if (!profile) {
       return res.status(404).json({ message: "Hồ sơ không tồn tại!" });
+    }
+
+    // Tìm email dựa theo UserId
+    const userMail = await Account.findOne({ _id: profile.createdBy });
+
+    if (!userMail) {
+      return res.status(404).json({ message: "Người dùng không tồn tại!" });
     }
 
     // Lấy dữ liệu hiện tại của `info`
@@ -900,14 +914,15 @@ exports.updateDetailsProfile = async (req, res) => {
       },
     ]);
 
+    const serviceName =
+      fullProFileWithImage?.registeredService?.serviceId?.serviceName.toLowerCase();
+
     const newNoti = await Noti.create({
       profileId,
-      message: `Hồ sơ ${profileId} đã được cập nhật thông tin mới.`,
+      message: `Hồ sơ ${serviceName} của bạn đã được cập nhật thông tin mới.`,
       status: "New",
     });
 
-    // Tìm email dựa theo UserId
-    const userMail = await Account.findOne({ _id: profile.createdBy });
     // Gửi thông báo khi thông tin khác thay đổi
     const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
     const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
@@ -1081,7 +1096,6 @@ exports.getProfileList = async (req, res) => {
       .json({ message: "Có lỗi xảy ra, vui lòng thử lại sau!" });
   }
 };
-
 // Chi tiết Hồ sơ aaaa
 exports.getProfileDetails = async (req, res) => {
   const { profileId } = req.params;
