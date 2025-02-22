@@ -872,17 +872,20 @@ exports.updateDetailsProfile = async (req, res) => {
     }
     // Xử lý file mới và cập nhật gallery
     updatedInfo.forEach((newInfo) => {
-      newInfo.fields.forEach((newField, index) => {
+      newInfo.fields = newInfo.fields.map((newField, index) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
           const file = galleryFiles[index];
-          if (!file) {
-            newField.value = null;
-            return newField; // Trả về object đã cập nhật
-          }
 
-          newField.value = file.location;
-          return newField;
+          // Nếu file bị xóa, đặt value = null
+          if (file === null) {
+            newField.value = null;
+          }
+          // Nếu có file mới, cập nhật giá trị
+          else {
+            newField.value = file.location;
+          }
         }
+        return newField;
       });
     });
 
