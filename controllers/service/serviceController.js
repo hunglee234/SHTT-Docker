@@ -379,6 +379,14 @@ exports.registerServicebyAdmin = async (req, res) => {
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
             const file = galleryFiles[index];
+
+            if (!file) {
+              return {
+                name: field.name,
+                value: null, // hoặc giá trị mặc định nếu cần
+                fieldType: field.fieldType, // giữ nguyên kiểu để tránh sai logic
+              };
+            }
             return {
               name: field.name,
               value: file.location,
@@ -520,6 +528,14 @@ exports.registerService = async (req, res) => {
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
             const file = galleryFiles[index];
+
+            if (!file) {
+              return {
+                name: field.name,
+                value: null, // hoặc giá trị mặc định nếu cần
+                fieldType: field.fieldType, // giữ nguyên kiểu để tránh sai logic
+              };
+            }
             return {
               name: field.name,
               value: file.location,
@@ -816,7 +832,6 @@ exports.updateDetailsProfile = async (req, res) => {
     const oldInfo = profile.info;
     const updatedInfo = JSON.parse(req.body.info || "[]"); // Lấy thông tin mới từ request body
 
-    const galleryFiles = req.files.gallery || [];
     const infoBrand = req.body.brand;
     const infoRepresent = JSON.parse(req.body.represent || "[]");
     let imageId = null;
@@ -855,14 +870,41 @@ exports.updateDetailsProfile = async (req, res) => {
       });
     }
     // Xử lý file mới và cập nhật gallery
+
+    let galleryOrder = JSON.parse(req.body.galleryOrder); // Lấy thứ tự
+    let files = req.files?.gallery || [];
+    let gallery = [];
+    let fileIndex = 0;
+
+    galleryOrder.forEach((item, index) => {
+      if (item === "null") {
+        gallery[index] = null; // Giữ nguyên null
+      } else {
+        gallery[index] = files[fileIndex]; // Lấy file theo đúng thứ tự
+        fileIndex++;
+      }
+    });
+
     updatedInfo.forEach((newInfo) => {
-      newInfo.fields.forEach((newField, index) => {
+      newInfo.fields = newInfo.fields.map((newField, index) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
-          const file = galleryFiles[index];
-          if (file) {
+          const file = gallery[index];
+
+          // / Nếu không có file được gửi lên, đặt giá trị cũ (không thay đổi)
+          if (file === undefined) {
+            return newField;
+          }
+
+          // Nếu file bị xóa, đặt value = null
+          if (file === null) {
+            newField.value = null;
+          }
+          // Nếu có file mới, cập nhật giá trị
+          else {
             newField.value = file.location;
           }
         }
+        return newField;
       });
     });
 
@@ -870,7 +912,7 @@ exports.updateDetailsProfile = async (req, res) => {
     if (
       changes.length === 0 &&
       !imageId &&
-      galleryFiles.length === 0 &&
+      gallery.length === 0 &&
       updatedInfo.length === 0
     ) {
       return res

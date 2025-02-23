@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 // Định nghĩa schema cho trường `fields` bên trong `info`
 const fieldSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  value: { type: mongoose.Schema.Types.Mixed, required: true },
+  value: { type: mongoose.Schema.Types.Mixed, required: false },
   fieldType: {
     type: String,
     required: true,
