@@ -870,19 +870,9 @@ exports.updateDetailsProfile = async (req, res) => {
       });
     }
     // Xử lý file mới và cập nhật gallery
-    console.log("📂 Files received:", JSON.stringify(req.files, null, 2));
-    console.log("📄 Body received:", req.body);
 
     let galleryOrder = JSON.parse(req.body.galleryOrder); // Lấy thứ tự
-    console.log("🔢 Gallery Order:", galleryOrder);
-
     let files = req.files?.gallery || [];
-    console.log("📂 Files Type:", typeof files); // Kiểm tra kiểu dữ liệu
-    console.log("📂 Files Content:", files);
-    console.log(
-      "📦 Available Files:",
-      files.map((f) => f.originalname)
-    );
     let gallery = [];
     let fileIndex = 0;
 
@@ -894,8 +884,6 @@ exports.updateDetailsProfile = async (req, res) => {
         fileIndex++;
       }
     });
-
-    console.log("✅ Final Gallery:", gallery);
 
     updatedInfo.forEach((newInfo) => {
       newInfo.fields = newInfo.fields.map((newField, index) => {
@@ -924,7 +912,7 @@ exports.updateDetailsProfile = async (req, res) => {
     if (
       changes.length === 0 &&
       !imageId &&
-      galleryFiles.length === 0 &&
+      gallery.length === 0 &&
       updatedInfo.length === 0
     ) {
       return res
