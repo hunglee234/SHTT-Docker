@@ -832,7 +832,6 @@ exports.updateDetailsProfile = async (req, res) => {
     const oldInfo = profile.info;
     const updatedInfo = JSON.parse(req.body.info || "[]"); // Lấy thông tin mới từ request body
 
-    const galleryFiles = req.files.gallery || [];
     const infoBrand = req.body.brand;
     const infoRepresent = JSON.parse(req.body.represent || "[]");
     let imageId = null;
@@ -871,10 +870,42 @@ exports.updateDetailsProfile = async (req, res) => {
       });
     }
     // Xử lý file mới và cập nhật gallery
+    console.log("📂 Files received:", JSON.stringify(req.files, null, 2));
+    console.log("📄 Body received:", req.body);
+
+    let galleryOrder = JSON.parse(req.body.galleryOrder); // Lấy thứ tự
+    console.log("🔢 Gallery Order:", galleryOrder);
+
+    let files = req.files?.gallery || [];
+    console.log("📂 Files Type:", typeof files); // Kiểm tra kiểu dữ liệu
+    console.log("📂 Files Content:", files);
+    console.log(
+      "📦 Available Files:",
+      files.map((f) => f.originalname)
+    );
+    let gallery = [];
+    let fileIndex = 0;
+
+    galleryOrder.forEach((item, index) => {
+      if (item === "null") {
+        gallery[index] = null; // Giữ nguyên null
+      } else {
+        gallery[index] = files[fileIndex]; // Lấy file theo đúng thứ tự
+        fileIndex++;
+      }
+    });
+
+    console.log("✅ Final Gallery:", gallery);
+
     updatedInfo.forEach((newInfo) => {
       newInfo.fields = newInfo.fields.map((newField, index) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
-          const file = galleryFiles[index];
+          const file = gallery[index];
+
+          // / Nếu không có file được gửi lên, đặt giá trị cũ (không thay đổi)
+          if (file === undefined) {
+            return newField;
+          }
 
           // Nếu file bị xóa, đặt value = null
           if (file === null) {
