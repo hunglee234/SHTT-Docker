@@ -350,13 +350,25 @@ exports.registerServicebyAdmin = async (req, res) => {
 
     const infoData = JSON.parse(req.body.info || "[]");
     const infoBrand = req.body.brand;
-    const galleryFiles = req.files.gallery || [];
-
     let imageId = null;
     if (req.files.image && req.files.image[0].mimetype.includes("image")) {
       const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
       imageId = await saveFile(imageUrl, "image");
     }
+
+    let galleryOrder = JSON.parse(req.body.galleryOrder); // Lấy thứ tự
+    let files = req.files?.gallery || [];
+    let gallery = [];
+    let fileIndex = 0;
+
+    galleryOrder.forEach((item, index) => {
+      if (item === "null") {
+        gallery[index] = null; // Giữ nguyên null
+      } else {
+        gallery[index] = files[fileIndex]; // Lấy file theo đúng thứ tự
+        fileIndex++;
+      }
+    });
 
     const responseObject = {
       info: infoData.map((infoItem) => ({
@@ -378,9 +390,9 @@ exports.registerServicebyAdmin = async (req, res) => {
             };
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
-            const file = galleryFiles[index];
+            const file = gallery[index];
 
-            if (!file) {
+            if (file === null) {
               return {
                 name: field.name,
                 value: null, // hoặc giá trị mặc định nếu cần
@@ -497,14 +509,25 @@ exports.registerService = async (req, res) => {
     // console.log("Đây là id dịch vụ theo form ", service._id);
 
     const infoData = JSON.parse(req.body.info || "[]");
-
-    const galleryFiles = req.files.gallery || [];
-
     let imageId = null;
     if (req.files.image && req.files.image[0].mimetype.includes("image")) {
       const imageUrl = req.files.image[0].location; // Đảm bảo lấy đúng file từ trường "image"
       imageId = await saveFile(imageUrl, "image");
     }
+
+    let galleryOrder = JSON.parse(req.body.galleryOrder); // Lấy thứ tự
+    let files = req.files?.gallery || [];
+    let gallery = [];
+    let fileIndex = 0;
+
+    galleryOrder.forEach((item, index) => {
+      if (item === "null") {
+        gallery[index] = null; // Giữ nguyên null
+      } else {
+        gallery[index] = files[fileIndex]; // Lấy file theo đúng thứ tự
+        fileIndex++;
+      }
+    });
 
     const responseObject = {
       info: infoData.map((infoItem) => ({
@@ -527,9 +550,9 @@ exports.registerService = async (req, res) => {
             };
           } else if (field.fieldType === "image" || field.fieldType === "pdf") {
             // Xử lý file (ảnh hoặc pdf)
-            const file = galleryFiles[index];
+            const file = gallery[index];
 
-            if (!file) {
+            if (file === null) {
               return {
                 name: field.name,
                 value: null, // hoặc giá trị mặc định nếu cần
@@ -879,6 +902,12 @@ exports.updateDetailsProfile = async (req, res) => {
     galleryOrder.forEach((item, index) => {
       if (item === "null") {
         gallery[index] = null; // Giữ nguyên null
+      } else if (
+        typeof item === "string" &&
+        item.trim() !== "" &&
+        item !== "file"
+      ) {
+        gallery[index] = galleryOrder[index];
       } else {
         gallery[index] = files[fileIndex]; // Lấy file theo đúng thứ tự
         fileIndex++;
@@ -889,14 +918,17 @@ exports.updateDetailsProfile = async (req, res) => {
       newInfo.fields = newInfo.fields.map((newField, index) => {
         if (newField.fieldType === "image" || newField.fieldType === "pdf") {
           const file = gallery[index];
-
-          // / Nếu không có file được gửi lên, đặt giá trị cũ (không thay đổi)
-          if (file === undefined) {
-            return newField;
+          // / Nếu file là text, đặt giá trị cũ (không thay đổi)
+          if (
+            typeof file === "string" &&
+            file.trim() !== "" &&
+            file !== "file"
+          ) {
+            newField.value = file;
           }
 
           // Nếu file bị xóa, đặt value = null
-          if (file === null) {
+          else if (file === null) {
             newField.value = null;
           }
           // Nếu có file mới, cập nhật giá trị
