@@ -1536,3 +1536,64 @@ exports.getProfileSVByUserId = async (req, res) => {
     });
   }
 };
+
+exports.duplicateProfile = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+
+    // Tìm hồ sơ gốc
+    const originalProfile = await Profile.findById(profileId).populate(
+      "registeredService"
+    );
+    if (!originalProfile) {
+      return res.status(404).json({ message: "Hồ sơ gốc không tồn tại" });
+    }
+
+    if (!originalProfile.registeredService) {
+      return res
+        .status(400)
+        .json({ message: "Hồ sơ không có registeredServiceID để sao chép" });
+    }
+
+    let newRegisteredServiceID = null;
+
+    // 2. Nếu hồ sơ có `registeredServiceID`, tạo bản sao cho `RegisteredService`
+    if (originalProfile.registeredService) {
+      const { _id, ...serviceData } =
+        originalProfile.registeredService.toObject(); // Loại bỏ _id, sao chép dữ liệu
+
+      const duplicatedRegisteredService = new RegisteredService({
+        ...serviceData, // Giữ nguyên dữ liệu cũ
+        _id: new mongoose.Types.ObjectId(), // Tạo ObjectId mới
+        createdAt: new Date(), // Thời gian mới
+        updatedAt: new Date(),
+      });
+
+      // Lưu bản sao vào database
+      const savedService = await duplicatedRegisteredService.save();
+      newRegisteredServiceID = savedService._id;
+    }
+
+    // 3. Tạo bản sao của `Profile`
+    const duplicatedProfile = new Profile({
+      ...originalProfile.toObject(),
+      _id: new mongoose.Types.ObjectId(), // ID mới
+      registeredService: newRegisteredServiceID, // Liên kết với RegisteredService mới
+      brand: originalProfile.brand
+        ? `${originalProfile.brand} Copy`
+        : "No Brand Copy", // Thêm chữ "copy" vào brand
+      createdAt: new Date(), // Cập nhật thời gian mới
+    });
+
+    // 4. Lưu Profile mới vào database
+    await duplicatedProfile.save();
+
+    res.status(201).json({
+      message: "Sao chép hồ sơ thành công",
+      profile: duplicatedProfile,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
