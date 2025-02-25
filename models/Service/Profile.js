@@ -106,5 +106,5 @@ const profileSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
+profileSchema.index({ brand: "text" });
 module.exports = mongoose.model("Profile", profileSchema);

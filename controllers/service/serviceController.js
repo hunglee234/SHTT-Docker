@@ -653,6 +653,15 @@ exports.registerService = async (req, res) => {
   }
 };
 
+const isEmptyOrNull = (value) => {
+  return (
+    value === null ||
+    value === "null" ||
+    value === "undefined" ||
+    (typeof value === "string" && value.trim() === "")
+  );
+};
+
 exports.updateGeneralProfileByAdmin = async (req, res) => {
   const { profileId } = req.params;
   const {
@@ -694,7 +703,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     updateField("profileCode", profileCode);
     updateField("numberOfCertificates", numberOfCertificates);
 
-    if (dateActive) {
+    if (isEmptyOrNull(dateActive)) {
+      profile.dateActive = null;
+      changes.push({
+        field: "dateActive",
+        oldValue: profile.dateActive,
+        newValue: null,
+      });
+    } else if (dateActive) {
       const formattedDate = moment(dateActive, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("dateActive", formattedDate.startOf("day").toDate());
@@ -703,7 +719,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    if (issueDate) {
+    if (isEmptyOrNull(issueDate)) {
+      profile.issueDate = null;
+      changes.push({
+        field: "issueDate",
+        oldValue: profile.issueDate,
+        newValue: null,
+      });
+    } else if (issueDate) {
       const formattedDate = moment(issueDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("issueDate", formattedDate.startOf("day").toDate());
@@ -712,7 +735,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    if (expiryDate) {
+    if (isEmptyOrNull(expiryDate)) {
+      profile.expiryDate = null;
+      changes.push({
+        field: "expiryDate",
+        oldValue: profile.expiryDate,
+        newValue: null,
+      });
+    } else if (expiryDate) {
       const formattedDate = moment(expiryDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("expiryDate", formattedDate.startOf("day").toDate());
@@ -724,7 +754,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
     updateField("status", status);
 
     // cho phép update ngày nộp hồ sơ
-    if (createdDate) {
+    if (isEmptyOrNull(createdDate)) {
+      profile.set("createdDate", null);
+      changes.push({
+        field: "createdDate",
+        oldValue: profile.createdDate,
+        newValue: null,
+      });
+    } else if (createdDate) {
       const formattedDate = moment(createdDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         profile.set("createdDate", formattedDate.toDate()); // Cho phép cập nhật createdAt
@@ -1063,15 +1100,8 @@ exports.getProfileList = async (req, res) => {
     ) {
       const cleanSearchValue = search_value.replace(/"/g, "").trim();
 
-      // 🔎 Truy vấn danh sách Service có serviceName khớp với search_value
-      const matchingServices = await Service.find({
-        serviceName: { $regex: cleanSearchValue, $options: "i" },
-      }).select("_id");
-
-      const matchingServiceIds = matchingServices.map((service) => service._id);
-
-      // ✅ Thêm điều kiện lọc theo serviceId
-      filter.serviceId = { $in: matchingServiceIds };
+      // 🔎 Truy vấn danh sách Profile có brandName khớp với search_value
+      filter.brand = { $regex: cleanSearchValue, $options: "i" };
     }
 
     // Bộ lọc theo form_date và to_date (ngày tháng)
