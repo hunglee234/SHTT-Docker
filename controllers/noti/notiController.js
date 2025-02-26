@@ -38,8 +38,13 @@ exports.getNotiList = async (req, res) => {
     }
 
     const listProfile = await Profile.find(filter).select("_id"); // Chỉ lấy ID của profile
-
     const profileIds = listProfile.map((profile) => profile._id); // Lấy danh sách ID
+
+    // Đếm số lượng thông báo mới
+    const newNotiCount = await Noti.countDocuments({
+      profileId: { $in: profileIds },
+      status: "New",
+    });
 
     const notiList = await Noti.find({ profileId: { $in: profileIds } }) // Sử dụng profileIds trong điều kiện
       .sort({ createdAt: -1 })
@@ -65,6 +70,7 @@ exports.getNotiList = async (req, res) => {
         currentPage: Number(page),
         totalPages: Math.ceil(totalNoti / limit),
         totalNoti,
+        newNotiCount,
       },
     });
   } catch (error) {

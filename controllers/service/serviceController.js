@@ -13,7 +13,11 @@ const Profile = require("../../models/Service/Profile");
 const { saveFile } = require("../../utils/saveFile");
 const { populate } = require("../../models/Role");
 const moment = require("moment");
-const sendMail = require("../../controllers/email/emailController");
+const {
+  sendMail,
+  sendStatusEmail,
+  sendProfileUpdatedEmail,
+} = require("../../controllers/email/emailController");
 const Procedure = require("../../models/Procedure");
 
 // CREATE
@@ -666,6 +670,9 @@ const isEmptyOrNull = (value) => {
   );
 };
 
+// Hàm kiểm tra thay đổi và xử lý thông báo
+// Lát check lại phần admin thay đổi thì mới có email và tạo noti thôi 2602
+
 exports.updateGeneralProfileByAdmin = async (req, res) => {
   const { profileId } = req.params;
   const {
@@ -704,8 +711,27 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     };
 
-    updateField("profileCode", profileCode);
-    updateField("numberOfCertificates", numberOfCertificates);
+    if (isEmptyOrNull(profileCode)) {
+      profile.profileCode = null;
+      changes.push({
+        field: "profileCode",
+        oldValue: profile.profileCode,
+        newValue: null,
+      });
+    } else {
+      updateField("profileCode", profileCode);
+    }
+
+    if (isEmptyOrNull(numberOfCertificates)) {
+      profile.numberOfCertificates = null;
+      changes.push({
+        field: "numberOfCertificates",
+        oldValue: profile.numberOfCertificates,
+        newValue: null,
+      });
+    } else {
+      updateField("numberOfCertificates", numberOfCertificates);
+    }
 
     if (isEmptyOrNull(dateActive)) {
       profile.dateActive = null;
@@ -755,8 +781,6 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    updateField("status", status);
-
     // cho phép update ngày nộp hồ sơ
     if (isEmptyOrNull(createdDate)) {
       profile.set("createdDate", null);
@@ -780,6 +804,9 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
           .json({ message: "Ngày nộp hồ sơ không hợp lệ!" });
       }
     }
+
+    const statusChanged = profile.status !== status;
+    if (statusChanged) updateField("status", status);
 
     await profile.save();
     if (changes.length === 0) {
@@ -811,23 +838,30 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       },
     ]);
 
-    const serviceName =
-      profileUpdatedByAdmin?.registeredService?.serviceId?.serviceName.toLowerCase();
+    const brandName = profileUpdatedByAdmin?.brand.toLowerCase(); // Lấy nhãn hiệu
+    const profileNumber = profileUpdatedByAdmin?.profileCode || "";
 
-    const newNoti = await Noti.create({
-      profileId,
-      message: `Trạng thái hồ sơ ${serviceName} đã được cập nhật thông tin mới.`,
-      status: "New",
-    });
+    // Gửi thông báo dựa trên thay đổi
+    let newNoti;
 
-    // Gửi thông báo khi thông tin khác thay đổi
-    const emailSubject = "Trạng thái hồ sơ của bạn đã được cập nhật";
-    const emailText = `Xin chào ${userMail.fullName},\n\nTrạng thái hồ sơ của bạn đã được cập nhật. \n\n Trạng thái hồ sơ hiện tại của bạn là ${status}. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
-
-    await sendMail(userMail.email, emailSubject, emailText);
+    if (statusChanged) {
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã cập nhật trạng thái!`,
+        status: "New",
+      });
+      sendStatusEmail(userMail.email, status);
+    } else {
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã được cập nhật!!`,
+        status: "New",
+      });
+      sendProfileUpdatedEmail(userMail.email, profileUpdatedByAdmin);
+    }
 
     res.status(200).json({
-      message: "Admin cập nhật số đơn số bằng thành công",
+      message: "Hồ sơ đã được cập nhật thành công",
       data: { UpdatedProfile: profileUpdatedByAdmin, notification: newNoti },
     });
   } catch (error) {
@@ -1029,20 +1063,24 @@ exports.updateDetailsProfile = async (req, res) => {
       },
     ]);
 
-    const serviceName =
-      fullProFileWithImage?.registeredService?.serviceId?.serviceName.toLowerCase();
+    let newNoti = null;
 
-    const newNoti = await Noti.create({
-      profileId,
-      message: `Hồ sơ ${serviceName} của bạn đã được cập nhật thông tin mới.`,
-      status: "New",
-    });
+    if (userRole === "Admin" || userRole === "SuperAdmin") {
+      const brandName = fullProFileWithImage?.brand.toLowerCase(); // Lấy nhãn hiệu
+      const profileNumber = fullProFileWithImage?.profileCode || "";
 
-    // Gửi thông báo khi thông tin khác thay đổi
-    const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
-    const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã được cập nhật!`,
+        status: "New",
+      });
 
-    await sendMail(userMail.email, emailSubject, emailText);
+      // Gửi thông báo khi thông tin khác thay đổi
+      const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
+      const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
+
+      await sendMail(userMail.email, emailSubject, emailText);
+    }
 
     // Trả về phản hồi
     res.status(200).json({
