@@ -119,6 +119,10 @@ exports.getAllServices = async (req, res) => {
       serviceQuery.serviceName = { $regex: cleanSearchValue, $options: "i" };
     }
 
+    if (!isAdmin) {
+      serviceQuery.status = "Đang hoạt động";
+    }
+
     let query = Service.find(serviceQuery)
       .populate({
         path: "image",
@@ -146,7 +150,7 @@ exports.getAllServices = async (req, res) => {
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
-      return res.status(404).json({ message: "No services found" });
+      return res.status(404).json({ message: "Không tìm thấy dịch vụ" });
     }
 
     const totalPages = isAdmin ? Math.ceil(totalServices / limit) : 1;
@@ -1538,15 +1542,47 @@ exports.getProfileSVByUserId = async (req, res) => {
 };
 
 exports.duplicateProfile = async (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+  const { profileId } = req.params;
   try {
-    const { profileId } = req.params;
+    let filter = {};
+    let registeredServiceIds = [];
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      filter = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = { registeredService: { $in: registeredServiceIds } };
+    }
 
     // Tìm hồ sơ gốc
-    const originalProfile = await Profile.findById(profileId).populate(
-      "registeredService"
-    );
+    const originalProfile = await Profile.findOne({
+      _id: profileId,
+      ...filter,
+    }).populate("registeredService");
+
     if (!originalProfile) {
-      return res.status(404).json({ message: "Hồ sơ gốc không tồn tại" });
+      return res.status(404).json({
+        message: "Hồ sơ gốc không tồn tại hoặc bạn không có quyền sao chép.",
+      });
     }
 
     if (!originalProfile.registeredService) {

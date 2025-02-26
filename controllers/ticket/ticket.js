@@ -4,40 +4,34 @@ const moment = require("moment");
 // Tạo ticket mới
 exports.createTicket = async (req, res) => {
   try {
-    const { category, name, phoneNumber, email, message } = req.body;
+    const { name, phoneNumber, email, message } = req.body;
     const { profileID } = req.params;
     const userId = req.user.id;
-    // Đầu vào của category là id
-    const categoryData = await CategoryTicket.findById(category);
-    if (!categoryData) {
-      return res
-        .status(404)
-        .json({ error: `Category with id '${category}' not found.` });
-    }
+
     // Kiểm tra thông tin đầu vào
-    if (!name || !phoneNumber || !email || !message) {
-      return res.status(400).json({ error: "All fields are required." });
+    if (!message) {
+      return res.status(400).json({ error: "Message is required." });
     }
 
     const createdBy = userId;
+    const ticketData = { message, createdBy };
 
-    // Tạo ticket
-    const ticketData = {
-      category,
-      name,
-      phoneNumber,
-      email,
-      message,
-      createdBy,
-    };
-
-    // Nếu có profileID, thêm vào dữ liệu ticket
+    // Nếu có profileID, chỉ cần message
     if (profileID) {
       ticketData.profileID = profileID;
+    } else {
+      if (!name || !phoneNumber || !email) {
+        return res.status(400).json({
+          error:
+            "Name, phoneNumber, and email are required when profileID is not provided.",
+        });
+      }
+      ticketData.name = name;
+      ticketData.phoneNumber = phoneNumber;
+      ticketData.email = email;
     }
 
     const ticket = await Ticket.create(ticketData);
-
     res.status(201).json({ message: "Ticket created successfully!", ticket });
   } catch (error) {
     console.error("Error creating ticket:", error);

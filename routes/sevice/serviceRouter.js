@@ -14,6 +14,8 @@ router.post(
   serviceController.registerService
 );
 
+router.post("/p/duplicate/:profileId", serviceController.duplicateProfile);
+
 router.put(
   "/update/:profileId",
   authenticateToken,
