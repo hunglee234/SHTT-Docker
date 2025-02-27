@@ -1,6 +1,5 @@
 const CategoryService = require("../../models/Service/CategoryService");
 const Service = require("../../models/Service/Service");
-const ManagerAccount = require("../../models/Account/InfoManager");
 const Account = require("../../models/Account/Account");
 
 exports.createCategory = async (req, res) => {
@@ -18,10 +17,10 @@ exports.createCategory = async (req, res) => {
 
     // Kiểm tra vai trò của tài khoản
     const role = account.role;
-    if (!role || role.name !== "Admin") {
+    if (!role || (role.name !== "Admin" && role.name !== "SuperAdmin")) {
       return res
         .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+        .json({ error: "Bạn không có quyền tạo loại dịch vụ" });
     }
 
     // Kết hợp tên admin và vai trò
@@ -163,10 +162,10 @@ exports.updateCategory = async (req, res) => {
 
     // Kiểm tra vai trò của tài khoản
     const role = account.role;
-    if (!role || role.name !== "Admin") {
+    if (!role || (role.name !== "Admin" && role.name !== "SuperAdmin")) {
       return res
         .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+        .json({ error: "Bạn không có quyền cập nhật loại dịch vụ" });
     }
 
     // Kết hợp tên admin và vai trò cho updatedBy
