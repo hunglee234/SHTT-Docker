@@ -29,10 +29,10 @@ const profileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: () => new mongoose.Types.ObjectId(),
     },
-    profileCode: { type: String, unique: true },
+    profileCode: { type: String, default: null },
     numberOfCertificates: {
       type: String,
-      unique: true,
+      default: null,
     },
     dateActive: {
       type: Date,
@@ -105,5 +105,17 @@ const profileSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+// Tạo index thủ công với Partial Filter
+profileSchema.index(
+  { numberOfCertificates: 1, ProfileCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      numberOfCertificates: { $exists: true, $ne: null },
+      ProfileCode: { $exists: true, $ne: null },
+    },
+  }
+);
+
 profileSchema.index({ brand: "text" });
 module.exports = mongoose.model("Profile", profileSchema);
