@@ -57,64 +57,110 @@ exports.listCustomersSearch = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 10,
+      limit = 20,
       search_value,
       from_date,
       to_date,
     } = req.query;
 
+    let accountIdsBySearch = new Set();
+    let accountIdsByDate = new Set();
+    let finalAccountIds = new Set();
+
+    // 🔹 1. Lấy role Manager
     const managerRole = await Role.findOne({ name: "Manager" });
 
     if (!managerRole) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Role 'Manager' không tồn tại." });
+      return res.status(404).json({
+        success: false,
+        message: "Role 'Manager' không tồn tại.",
+      });
     }
 
-    let accounts = [];
-    let infoStaffs = [];
-    let accountIds = [];
-
-    // 🔹 Truy vấn Account theo fullName
-    const accountQuery = { role: managerRole._id };
-
-    if (search_value) {
-      accountQuery.fullName = { $regex: search_value, $options: "i" };
-    }
-
-    if (from_date && to_date) {
-      accountQuery.createdDate = {
-        $gte: new Date(from_date),
-        $lte: new Date(to_date).setHours(23, 59, 59, 999),
+    // 🔹 2. Truy vấn theo search_value (nếu có)
+    if (search_value?.trim()) {
+      const accountQuery = {
+        role: managerRole._id,
+        fullName: { $regex: search_value, $options: "i" },
       };
+
+      const foundAccounts = await Account.find(accountQuery)
+        .select("_id")
+        .lean();
+
+      foundAccounts.forEach((acc) =>
+        accountIdsBySearch.add(acc._id.toString())
+      );
+
+      const foundInfoStaffs = await InfoStaff.find({
+        companyName: { $regex: search_value, $options: "i" },
+      })
+        .populate("account", "_id role")
+        .lean();
+
+      foundInfoStaffs.forEach((info) => {
+        if (
+          info.account &&
+          info.account.role.toString() === managerRole._id.toString()
+        ) {
+          accountIdsBySearch.add(info.account._id.toString());
+        }
+      });
     }
 
-    accounts = await Account.find(accountQuery)
+    // 🔹 3. Truy vấn theo from_date & to_date (nếu có)
+    if (from_date && to_date) {
+      const fromDate = new Date(from_date);
+      const toDate = new Date(to_date);
+      if (!isNaN(fromDate) && !isNaN(toDate)) {
+        toDate.setHours(23, 59, 59, 999);
+
+        const foundAccountsByDate = await Account.find({
+          role: managerRole._id,
+          createdDate: { $gte: fromDate, $lte: toDate },
+        })
+          .select("_id")
+          .lean();
+
+        foundAccountsByDate.forEach((acc) =>
+          accountIdsByDate.add(acc._id.toString())
+        );
+      }
+    }
+
+    // 🔹 4. Xác định danh sách tài khoản cuối cùng
+    if (search_value && from_date && to_date) {
+      // Nếu cả search_value và khoảng ngày tồn tại, chỉ lấy giao của 2 tập hợp
+      finalAccountIds = new Set(
+        [...accountIdsBySearch].filter((id) => accountIdsByDate.has(id))
+      );
+    } else if (search_value) {
+      finalAccountIds = accountIdsBySearch;
+    } else if (from_date && to_date) {
+      finalAccountIds = accountIdsByDate;
+    } else {
+      // Nếu không có điều kiện nào, lấy toàn bộ Managers
+      const defaultAccounts = await Account.find({ role: managerRole._id })
+        .select("_id")
+        .lean();
+      defaultAccounts.forEach((acc) => finalAccountIds.add(acc._id.toString()));
+    }
+
+    // 🔹 5. Truy vấn danh sách accounts từ finalAccountIds
+    const accounts = await Account.find({ _id: { $in: [...finalAccountIds] } })
       .select("fullName email createdDate")
-      .sort({ createdDate: -1 })
       .lean();
 
-    accountIds = accounts.map((acc) => acc._id);
-
-    // 🔹 Truy vấn InfoStaff theo companyName hoặc accountId
-    let infoStaffQuery = {};
-
-    if (search_value) {
-      infoStaffQuery.$or = [
-        { companyName: { $regex: search_value, $options: "i" } },
-        ...(accountIds.length ? [{ account: { $in: accountIds } }] : []),
-      ];
-    } else if (accountIds.length) {
-      infoStaffQuery.account = { $in: accountIds };
-    }
-
-    infoStaffs = await InfoStaff.find(infoStaffQuery)
+    // 🔹 6. Truy vấn danh sách InfoStaff từ finalAccountIds
+    const infoStaffs = await InfoStaff.find({
+      account: { $in: [...finalAccountIds] },
+    })
       .populate("account", "fullName email createdDate")
       .populate({ path: "avatar", select: "url" })
       .select("createdAt staffCode phone status account avatar companyName")
       .lean();
 
-    // 🔹 Hợp nhất dữ liệu từ Account & InfoStaff
+    // 🔹 7. Hợp nhất dữ liệu từ Account & InfoStaff
     let resultMap = new Map();
 
     accounts.forEach((account) => {
@@ -134,9 +180,7 @@ exports.listCustomersSearch = async (req, res) => {
 
     infoStaffs.forEach((infoStaff) => {
       const accId = infoStaff.account?._id.toString();
-
       if (accId && resultMap.has(accId)) {
-        // 🔹 Nếu accountId đã có trong danh sách, cập nhật thêm thông tin từ InfoStaff
         let existingData = resultMap.get(accId);
         existingData.companyName =
           infoStaff.companyName || existingData.companyName;
@@ -147,7 +191,6 @@ exports.listCustomersSearch = async (req, res) => {
         existingData.avatar = infoStaff.avatar || existingData.avatar;
         resultMap.set(accId, existingData);
       } else {
-        // 🔹 Nếu accountId không tồn tại (có thể InfoStaff không liên kết với Account)
         resultMap.set(infoStaff._id.toString(), {
           accountId: infoStaff.account?._id || null,
           fullName: infoStaff.account?.fullName || null,
@@ -163,15 +206,13 @@ exports.listCustomersSearch = async (req, res) => {
       }
     });
 
-    // Chuyển Map thành array
+    // 🔹 8. Chuyển Map thành array
     let result = Array.from(resultMap.values());
 
-    // 🔹 Sắp xếp theo ngày tạo gần nhất
-    result = result.sort(
-      (a, b) => new Date(b.createdDate) - new Date(a.createdDate)
-    );
+    // 🔹 9. Sắp xếp theo ngày tạo gần nhất
+    result.sort((a, b) => new Date(b.createdDate) - new Date(a.createdDate));
 
-    // 🔹 Áp dụng phân trang
+    // 🔹 10. Áp dụng phân trang
     const startIndex = (page - 1) * limit;
     const paginatedResult = result.slice(
       startIndex,
