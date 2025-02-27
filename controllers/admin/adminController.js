@@ -45,7 +45,10 @@ exports.createAccount = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Admin") {
+    if (
+      !account.role ||
+      (account.role.name !== "Admin" && account.role.name !== "SuperAdmin")
+    ) {
       return res
         .status(403)
         .json({ error: "Bạn không có quyền tạo tài khoản." });
