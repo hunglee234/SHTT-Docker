@@ -193,9 +193,9 @@ exports.updateTicketStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (user.role !== "Admin") {
+    if (user.role !== "Admin" && user.role !== "SuperAdmin") {
       return res.status(403).json({
-        error: "Access denied. Only Admin can update the ticket status.",
+        error: "Bạn không có quyền cập nhật trạng thái",
       });
     }
 

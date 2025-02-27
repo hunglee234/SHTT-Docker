@@ -3,15 +3,11 @@ const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const CategoryService = require("../../models/Service/CategoryService");
 const Noti = require("../../models/Noti");
-const Ticket = require("../../models/Ticket/Ticket");
-const User = require("../../models/User/User");
 const RegisteredService = require("../../models/Service/RegisteredService");
-const InfoUser = require("../../models/User/InfoUser");
 const Record = require("../../models/Service/Record");
 const mongoose = require("mongoose");
 const Profile = require("../../models/Service/Profile");
 const { saveFile } = require("../../utils/saveFile");
-const { populate } = require("../../models/Role");
 const moment = require("moment");
 const {
   sendMail,
@@ -51,10 +47,11 @@ exports.createService = async (req, res) => {
       return res.status(404).json({ error: "Account not found" });
     }
 
-    if (!account.role || account.role.name !== "Admin") {
-      return res
-        .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+    if (
+      !account.role ||
+      (account.role.name !== "Admin" && account.role.name !== "SuperAdmin")
+    ) {
+      return res.status(403).json({ error: "Bạn không có quyền tạo dịch vụ" });
     }
 
     // check Category Name
@@ -248,10 +245,10 @@ exports.updateService = async (req, res) => {
 
     // Kiểm tra vai trò của tài khoản
     const role = account.role;
-    if (!role || role.name !== "Admin") {
+    if (!role || (role.name !== "Admin" && role.name !== "SuperAdmin")) {
       return res
         .status(403)
-        .json({ error: "Permission denied. User is not an Admin." });
+        .json({ error: "Bạn không có quyền cập nhật dịch vụ" });
     }
 
     // check Category Name
