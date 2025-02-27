@@ -111,8 +111,17 @@ exports.getCategoryById = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
+    // Kiểm tra role của user
+    const isAdmin = req.user && ["Admin", "SuperAdmin"].includes(req.user.role);
+
+    // Điều kiện lọc dịch vụ
+    let serviceQuery = { category: category._id };
+    if (!isAdmin) {
+      serviceQuery.status = "Đang hoạt động"; // User thường chỉ thấy dịch vụ đang hoạt động
+    }
+
     // Tìm các dịch vụ liên quan đến category
-    const services = await Service.find({ category: category._id });
+    const services = await Service.find(serviceQuery);
 
     // Lấy danh sách dịch vụ cho từng category
     const categoryWithServices = {

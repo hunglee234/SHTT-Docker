@@ -38,8 +38,13 @@ exports.getNotiList = async (req, res) => {
     }
 
     const listProfile = await Profile.find(filter).select("_id"); // Chỉ lấy ID của profile
-
     const profileIds = listProfile.map((profile) => profile._id); // Lấy danh sách ID
+
+    // Đếm số lượng thông báo mới
+    const newNotiCount = await Noti.countDocuments({
+      profileId: { $in: profileIds },
+      status: "New",
+    });
 
     const notiList = await Noti.find({ profileId: { $in: profileIds } }) // Sử dụng profileIds trong điều kiện
       .sort({ createdAt: -1 })
@@ -65,6 +70,7 @@ exports.getNotiList = async (req, res) => {
         currentPage: Number(page),
         totalPages: Math.ceil(totalNoti / limit),
         totalNoti,
+        newNotiCount,
       },
     });
   } catch (error) {
@@ -94,5 +100,55 @@ exports.getNotiDetail = async (req, res) => {
   } catch (error) {
     console.error("Lỗi khi lấy chi tiết thông báo:", error.message);
     return res.status(500).json({ message: "Lỗi khi lấy chi tiết thông báo" });
+  }
+};
+
+// Lấy số lượng thông báo mới
+exports.getNewNotiCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    let filter = {};
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      filter = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
+    } else {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      const registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = { registeredService: { $in: registeredServiceIds } };
+    }
+
+    const listProfile = await Profile.find(filter).select("_id");
+    const profileIds = listProfile.map((profile) => profile._id);
+
+    const newNotiCount = await Noti.countDocuments({
+      profileId: { $in: profileIds },
+      status: "New",
+    });
+
+    return res
+      .status(200)
+      .json({ message: "Số lượng thông báo mới", newNotiCount });
+  } catch (error) {
+    console.error("Lỗi khi lấy số lượng thông báo mới:", error.message);
+    return res
+      .status(500)
+      .json({ message: "Lỗi khi lấy số lượng thông báo mới" });
   }
 };

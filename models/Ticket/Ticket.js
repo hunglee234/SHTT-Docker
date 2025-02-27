@@ -2,15 +2,14 @@ const mongoose = require("mongoose");
 
 const TicketSchema = new mongoose.Schema(
   {
-    // Tên loại ticket
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "CategoryTicket",
-      required: true,
+      required: false,
     },
-    name: { type: String, required: true },
-    phoneNumber: { type: String, required: true },
-    email: { type: String, required: true },
+    name: { type: String, required: false },
+    phoneNumber: { type: String, required: false },
+    email: { type: String, required: false },
     message: { type: String, required: true },
     status: { type: String, default: "pending" },
     createdBy: {

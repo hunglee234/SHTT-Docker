@@ -13,7 +13,11 @@ const Profile = require("../../models/Service/Profile");
 const { saveFile } = require("../../utils/saveFile");
 const { populate } = require("../../models/Role");
 const moment = require("moment");
-const sendMail = require("../../controllers/email/emailController");
+const {
+  sendMail,
+  sendStatusEmail,
+  sendProfileUpdatedEmail,
+} = require("../../controllers/email/emailController");
 const Procedure = require("../../models/Procedure");
 
 // CREATE
@@ -119,6 +123,10 @@ exports.getAllServices = async (req, res) => {
       serviceQuery.serviceName = { $regex: cleanSearchValue, $options: "i" };
     }
 
+    if (!isAdmin) {
+      serviceQuery.status = "Đang hoạt động";
+    }
+
     let query = Service.find(serviceQuery)
       .populate({
         path: "image",
@@ -146,7 +154,7 @@ exports.getAllServices = async (req, res) => {
     const totalServices = await Service.countDocuments(serviceQuery);
 
     if (!services || services.length === 0) {
-      return res.status(404).json({ message: "No services found" });
+      return res.status(404).json({ message: "Không tìm thấy dịch vụ" });
     }
 
     const totalPages = isAdmin ? Math.ceil(totalServices / limit) : 1;
@@ -653,6 +661,18 @@ exports.registerService = async (req, res) => {
   }
 };
 
+const isEmptyOrNull = (value) => {
+  return (
+    value === null ||
+    value === "null" ||
+    value === "undefined" ||
+    (typeof value === "string" && value.trim() === "")
+  );
+};
+
+// Hàm kiểm tra thay đổi và xử lý thông báo
+// Lát check lại phần admin thay đổi thì mới có email và tạo noti thôi 2602
+
 exports.updateGeneralProfileByAdmin = async (req, res) => {
   const { profileId } = req.params;
   const {
@@ -691,10 +711,36 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     };
 
-    updateField("profileCode", profileCode);
-    updateField("numberOfCertificates", numberOfCertificates);
+    if (isEmptyOrNull(profileCode)) {
+      profile.profileCode = null;
+      changes.push({
+        field: "profileCode",
+        oldValue: profile.profileCode,
+        newValue: null,
+      });
+    } else {
+      updateField("profileCode", profileCode);
+    }
 
-    if (dateActive) {
+    if (isEmptyOrNull(numberOfCertificates)) {
+      profile.numberOfCertificates = null;
+      changes.push({
+        field: "numberOfCertificates",
+        oldValue: profile.numberOfCertificates,
+        newValue: null,
+      });
+    } else {
+      updateField("numberOfCertificates", numberOfCertificates);
+    }
+
+    if (isEmptyOrNull(dateActive)) {
+      profile.dateActive = null;
+      changes.push({
+        field: "dateActive",
+        oldValue: profile.dateActive,
+        newValue: null,
+      });
+    } else if (dateActive) {
       const formattedDate = moment(dateActive, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("dateActive", formattedDate.startOf("day").toDate());
@@ -703,7 +749,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    if (issueDate) {
+    if (isEmptyOrNull(issueDate)) {
+      profile.issueDate = null;
+      changes.push({
+        field: "issueDate",
+        oldValue: profile.issueDate,
+        newValue: null,
+      });
+    } else if (issueDate) {
       const formattedDate = moment(issueDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("issueDate", formattedDate.startOf("day").toDate());
@@ -712,7 +765,14 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    if (expiryDate) {
+    if (isEmptyOrNull(expiryDate)) {
+      profile.expiryDate = null;
+      changes.push({
+        field: "expiryDate",
+        oldValue: profile.expiryDate,
+        newValue: null,
+      });
+    } else if (expiryDate) {
       const formattedDate = moment(expiryDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         updateField("expiryDate", formattedDate.startOf("day").toDate());
@@ -721,10 +781,15 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       }
     }
 
-    updateField("status", status);
-
     // cho phép update ngày nộp hồ sơ
-    if (createdDate) {
+    if (isEmptyOrNull(createdDate)) {
+      profile.set("createdDate", null);
+      changes.push({
+        field: "createdDate",
+        oldValue: profile.createdDate,
+        newValue: null,
+      });
+    } else if (createdDate) {
       const formattedDate = moment(createdDate, "DD/MM/YYYY", true);
       if (formattedDate.isValid()) {
         profile.set("createdDate", formattedDate.toDate()); // Cho phép cập nhật createdAt
@@ -739,6 +804,9 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
           .json({ message: "Ngày nộp hồ sơ không hợp lệ!" });
       }
     }
+
+    const statusChanged = profile.status !== status;
+    if (statusChanged) updateField("status", status);
 
     await profile.save();
     if (changes.length === 0) {
@@ -770,23 +838,30 @@ exports.updateGeneralProfileByAdmin = async (req, res) => {
       },
     ]);
 
-    const serviceName =
-      profileUpdatedByAdmin?.registeredService?.serviceId?.serviceName.toLowerCase();
+    const brandName = profileUpdatedByAdmin?.brand.toLowerCase(); // Lấy nhãn hiệu
+    const profileNumber = profileUpdatedByAdmin?.profileCode || "";
 
-    const newNoti = await Noti.create({
-      profileId,
-      message: `Trạng thái hồ sơ ${serviceName} đã được cập nhật thông tin mới.`,
-      status: "New",
-    });
+    // Gửi thông báo dựa trên thay đổi
+    let newNoti;
 
-    // Gửi thông báo khi thông tin khác thay đổi
-    const emailSubject = "Trạng thái hồ sơ của bạn đã được cập nhật";
-    const emailText = `Xin chào ${userMail.fullName},\n\nTrạng thái hồ sơ của bạn đã được cập nhật. \n\n Trạng thái hồ sơ hiện tại của bạn là ${status}. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
-
-    await sendMail(userMail.email, emailSubject, emailText);
+    if (statusChanged) {
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã cập nhật trạng thái!`,
+        status: "New",
+      });
+      sendStatusEmail(userMail.email, status);
+    } else {
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã được cập nhật!!`,
+        status: "New",
+      });
+      sendProfileUpdatedEmail(userMail.email, profileUpdatedByAdmin);
+    }
 
     res.status(200).json({
-      message: "Admin cập nhật số đơn số bằng thành công",
+      message: "Hồ sơ đã được cập nhật thành công",
       data: { UpdatedProfile: profileUpdatedByAdmin, notification: newNoti },
     });
   } catch (error) {
@@ -988,20 +1063,24 @@ exports.updateDetailsProfile = async (req, res) => {
       },
     ]);
 
-    const serviceName =
-      fullProFileWithImage?.registeredService?.serviceId?.serviceName.toLowerCase();
+    let newNoti = null;
 
-    const newNoti = await Noti.create({
-      profileId,
-      message: `Hồ sơ ${serviceName} của bạn đã được cập nhật thông tin mới.`,
-      status: "New",
-    });
+    if (userRole === "Admin" || userRole === "SuperAdmin") {
+      const brandName = fullProFileWithImage?.brand.toLowerCase(); // Lấy nhãn hiệu
+      const profileNumber = fullProFileWithImage?.profileCode || "";
 
-    // Gửi thông báo khi thông tin khác thay đổi
-    const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
-    const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
+      newNoti = await Noti.create({
+        profileId,
+        message: `Hồ sơ ${profileNumber} ${brandName} đã được cập nhật!`,
+        status: "New",
+      });
 
-    await sendMail(userMail.email, emailSubject, emailText);
+      // Gửi thông báo khi thông tin khác thay đổi
+      const emailSubject = "Thông tin hồ sơ của bạn đã được cập nhật";
+      const emailText = `Xin chào ${userMail.fullName},\n\nThông tin hồ sơ của bạn đã được cập nhật. Vui lòng kiểm tra lại hồ sơ của bạn để biết thêm chi tiết.\n\nBest regards,\nYour App Team`;
+
+      await sendMail(userMail.email, emailSubject, emailText);
+    }
 
     // Trả về phản hồi
     res.status(200).json({
@@ -1063,15 +1142,8 @@ exports.getProfileList = async (req, res) => {
     ) {
       const cleanSearchValue = search_value.replace(/"/g, "").trim();
 
-      // 🔎 Truy vấn danh sách Service có serviceName khớp với search_value
-      const matchingServices = await Service.find({
-        serviceName: { $regex: cleanSearchValue, $options: "i" },
-      }).select("_id");
-
-      const matchingServiceIds = matchingServices.map((service) => service._id);
-
-      // ✅ Thêm điều kiện lọc theo serviceId
-      filter.serviceId = { $in: matchingServiceIds };
+      // 🔎 Truy vấn danh sách Profile có brandName khớp với search_value
+      filter.brand = { $regex: cleanSearchValue, $options: "i" };
     }
 
     // Bộ lọc theo form_date và to_date (ngày tháng)
@@ -1504,5 +1576,98 @@ exports.getProfileSVByUserId = async (req, res) => {
     return res.status(500).json({
       message: "Có lỗi xảy ra, vui lòng thử lại sau!",
     });
+  }
+};
+
+exports.duplicateProfile = async (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+  const { profileId } = req.params;
+  try {
+    let filter = {};
+    let registeredServiceIds = [];
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      filter = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter = { registeredService: { $in: registeredServiceIds } };
+    }
+
+    // Tìm hồ sơ gốc
+    const originalProfile = await Profile.findOne({
+      _id: profileId,
+      ...filter,
+    }).populate("registeredService");
+
+    if (!originalProfile) {
+      return res.status(404).json({
+        message: "Hồ sơ gốc không tồn tại hoặc bạn không có quyền sao chép.",
+      });
+    }
+
+    if (!originalProfile.registeredService) {
+      return res
+        .status(400)
+        .json({ message: "Hồ sơ không có registeredServiceID để sao chép" });
+    }
+
+    let newRegisteredServiceID = null;
+
+    // 2. Nếu hồ sơ có `registeredServiceID`, tạo bản sao cho `RegisteredService`
+    if (originalProfile.registeredService) {
+      const { _id, ...serviceData } =
+        originalProfile.registeredService.toObject(); // Loại bỏ _id, sao chép dữ liệu
+
+      const duplicatedRegisteredService = new RegisteredService({
+        ...serviceData, // Giữ nguyên dữ liệu cũ
+        _id: new mongoose.Types.ObjectId(), // Tạo ObjectId mới
+        createdAt: new Date(), // Thời gian mới
+        updatedAt: new Date(),
+      });
+
+      // Lưu bản sao vào database
+      const savedService = await duplicatedRegisteredService.save();
+      newRegisteredServiceID = savedService._id;
+    }
+
+    // 3. Tạo bản sao của `Profile`
+    const duplicatedProfile = new Profile({
+      ...originalProfile.toObject(),
+      _id: new mongoose.Types.ObjectId(), // ID mới
+      registeredService: newRegisteredServiceID, // Liên kết với RegisteredService mới
+      brand: originalProfile.brand
+        ? `${originalProfile.brand} Copy`
+        : "No Brand Copy", // Thêm chữ "copy" vào brand
+      createdAt: new Date(), // Cập nhật thời gian mới
+    });
+
+    // 4. Lưu Profile mới vào database
+    await duplicatedProfile.save();
+
+    res.status(201).json({
+      message: "Sao chép hồ sơ thành công",
+      profile: duplicatedProfile,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 };

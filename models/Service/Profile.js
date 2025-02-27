@@ -29,11 +29,10 @@ const profileSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       default: () => new mongoose.Types.ObjectId(),
     },
-    profileCode: { type: String, unique: true, default: "" },
+    profileCode: { type: String, unique: true },
     numberOfCertificates: {
       type: String,
       unique: true,
-      default: "",
     },
     dateActive: {
       type: Date,
@@ -106,5 +105,5 @@ const profileSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
+profileSchema.index({ brand: "text" });
 module.exports = mongoose.model("Profile", profileSchema);

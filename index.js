@@ -6,7 +6,7 @@ const app = express();
 //Middleware
 app.use(corsMiddleware);
 app.use(securityHeaders);
-app.use(express.json());
+app.use(express.json()); // Hỗ trợ application/json
 const { ALL_ROLES } = require("./middleware/constants");
 const { authenticateToken, authorizeRole } = require("./middleware/auth");
 const adminRoutes = require("./routes/admin/adminRoutes");
@@ -27,7 +27,6 @@ app.use(
 );
 
 // Route dành cho client
-// Bổ sung authenticateToken, authorizeRole(["ManagerManager"])
 app.use(
   "/manager",
   authenticateToken,
@@ -35,7 +34,6 @@ app.use(
   managerRoutes
 );
 
-// Client
 app.use("/user", authenticateToken, authorizeRole(ALL_ROLES), userRoutes);
 
 connectDB(app);
