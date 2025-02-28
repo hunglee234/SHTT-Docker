@@ -1550,36 +1550,29 @@ exports.getEditHistory = async (req, res) => {
 
 exports.getProfileSVByUserId = async (req, res) => {
   const userRole = req.user.role;
+
   try {
     const { userId } = req.params;
+    const account = await Account.findById(userId).populate("role");
+    const roleName = account.role.name;
     const { page = 1, limit = 10 } = req.query;
-    let serviceQuery = {
-      createdUserId: userId,
-    };
-
     const skip = (page - 1) * limit;
+    let profileQuery = {};
 
-    const registeredServices = await RegisteredService.find(
-      serviceQuery
-    ).populate([
-      {
-        path: "serviceId",
-        select: "serviceName description",
-        populate: { path: "category", select: "categoryName" },
-      },
-    ]);
-
-    if (!registeredServices) {
-      return res.status(404).json({
-        message: "Không tìm thấy dịch vụ của người dùng",
+    if (roleName === "Manager") {
+      const managedServices = await RegisteredService.find({
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
       });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      // Lọc các hồ sơ mà manager quản lý hoặc họ tạo
+      profileQuery = {
+        $or: [
+          { registeredService: { $in: managedServiceIds } },
+          { createdBy: userId },
+        ],
+      };
     }
-
-    const serviceIds = registeredServices.filter(
-      (service) => service.serviceId
-    );
-
-    let profileQuery = { registeredService: { $in: serviceIds } };
 
     // 🔴 Nếu là SuperAdmin hoặc Admin, loại bỏ các bản nháp (draft: true)
     if (["SuperAdmin", "Admin"].includes(userRole)) {
@@ -1642,9 +1635,7 @@ exports.getProfileSVByUserId = async (req, res) => {
       };
     });
 
-    const totalProfiles = await Profile.countDocuments({
-      registeredService: { $in: serviceIds },
-    });
+    const totalProfiles = await Profile.countDocuments(profileQuery);
 
     const totalPages = Math.ceil(totalProfiles / limit);
 

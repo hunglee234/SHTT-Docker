@@ -1,5 +1,7 @@
 const Contract = require("../../models/Contract");
 const Account = require("../../models/Account/Account");
+const InfoAccount = require("../../models/Account/InfoStaff");
+
 // Thêm hợp đồng
 exports.createContract = async (req, res) => {
   try {
@@ -132,9 +134,32 @@ exports.getAllContracts = async (req, res) => {
 exports.getAllContractsByUserId = async (req, res) => {
   const { search_value, page = 1, limit = 10 } = req.query;
   const { id: userId } = req.user;
+  const userRole = req.user.role;
 
   try {
-    let contractQuery = { customerId: userId };
+    let contractQuery = {};
+
+    if (userRole === "Manager") {
+      // Nếu là manager, lấy hợp đồng của chính họ
+      contractQuery = { customerId: userId };
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      // Nếu là staff, tìm manager của họ trong database
+      const managerInfo = await InfoAccount.findOne({ account: userId }).select(
+        "createdByManager"
+      );
+      if (!managerInfo) {
+        return res.status(404).json({
+          message: "Không tìm thấy người quản lý của bạn!",
+        });
+      }
+
+      // Lấy hợp đồng của manager đó
+      contractQuery = { customerId: managerInfo.createdByManager };
+    } else {
+      return res.status(403).json({
+        message: "Bạn không có quyền truy cập hợp đồng!",
+      });
+    }
 
     if (search_value && search_value.trim() !== "") {
       const cleanSearchValue = search_value.replace(/"/g, "").trim();
@@ -160,7 +185,7 @@ exports.getAllContractsByUserId = async (req, res) => {
     const totalPages = Math.ceil(totalContracts / limit);
 
     res.status(200).json({
-      message: "Danh sách hợp đồng:",
+      message: "Danh sách hợp đồng ds :",
       data: {
         currentPage: page,
         totalPages: totalPages,
