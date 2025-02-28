@@ -20,7 +20,7 @@ const serviceSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    serviceCode: { type: String, unique: true, default: "" },
+    serviceCode: { type: String, unique: true },
     price: { type: String, required: true, default: "" },
     status: {
       type: String,
@@ -82,6 +82,18 @@ const serviceSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-serviceSchema.index({ serviceName: "text" });
+// Tạo index thủ công với Partial Filter
+serviceSchema.index(
+  { serviceName: 1, serviceCode: 1, formName: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      serviceName: { $exists: true, $ne: null, $ne: "" },
+      serviceCode: { $exists: true, $ne: null, $ne: "" },
+      formName: { $exists: true, $ne: null, $ne: "" },
+    },
+  }
+);
 
+serviceSchema.index({ serviceName: "text" });
 module.exports = mongoose.model("Service", serviceSchema);

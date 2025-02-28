@@ -1460,7 +1460,10 @@ exports.deleteProfiledraft = async (req, res) => {
       });
     }
 
-    let filter = { _id: profileId, isDraft: true }; // Chỉ xóa hồ sơ nháp
+    let filter = {
+      _id: profileId,
+      $or: [{ isDraft: true }, { status: "Chờ duyệt" }],
+    }; // Chỉ xóa hồ sơ nháp
     let registeredServiceIds = [];
 
     if (userRole === "Manager") {
@@ -1499,7 +1502,7 @@ exports.deleteProfiledraft = async (req, res) => {
     ]);
 
     return res.status(200).json({
-      message: "Hồ sơ nháp đã được xóa thành công.",
+      message: "Hồ sơ đã được xóa thành công.",
     });
   } catch (error) {
     console.error(error);
