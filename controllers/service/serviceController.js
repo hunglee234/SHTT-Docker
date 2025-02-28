@@ -221,6 +221,7 @@ exports.updateService = async (req, res) => {
       price,
       status,
       procedure_id,
+      formName,
     } = req.body;
 
     const existingService = await Service.findById(id);
@@ -275,6 +276,7 @@ exports.updateService = async (req, res) => {
         image: imageId,
         updatedBy,
         procedure: procedure_id,
+        formName,
       },
       { new: true, runValidators: true }
     );

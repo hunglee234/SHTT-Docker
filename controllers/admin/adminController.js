@@ -207,7 +207,7 @@ exports.getAccountById = async (req, res) => {
     const { id: userId } = req.user;
 
     // Tìm nhân viên theo ID và populate thông tin account, role
-    const staff = await StaffAccount.findById(id)
+    const staff = await StaffAccount.findOne({ account: id })
       .populate({
         path: "account",
         select: "fullName email username avatar role",
@@ -230,7 +230,7 @@ exports.getAccountById = async (req, res) => {
 
     // Dữ liệu trả về cho client
     const responseData = {
-      id: staff._id,
+      id: staff.account._id,
       avatar: avatarUrl,
       fullName: staff.account.fullName,
       email: staff.account.email,
@@ -307,6 +307,7 @@ exports.updateAccount = async (req, res) => {
       : null;
 
     // Tìm thông tin nhân viên cần cập nhật
+
     const staffAccount = await StaffAccount.findOne({
       account: id,
     }).populate("account");
