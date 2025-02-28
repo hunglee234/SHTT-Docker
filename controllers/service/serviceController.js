@@ -1681,6 +1681,7 @@ exports.duplicateProfile = async (req, res) => {
         : "Chưa có nhãn hiệu ( Bản nháp )", // Thêm chữ "Bản nháp" vào brand
       createdAt: new Date(), // Cập nhật thời gian mới
       isDraft: true,
+      status: "Chờ duyệt",
     });
 
     // 4. Lưu Profile mới vào database
