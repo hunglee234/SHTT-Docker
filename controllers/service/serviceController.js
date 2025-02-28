@@ -1444,6 +1444,71 @@ exports.deleteProfile = async (req, res) => {
   }
 };
 
+exports.deleteProfiledraft = async (req, res) => {
+  const userId = req.user.id;
+  const userRole = req.user.role;
+  const { profileId } = req.params;
+
+  if (!profileId) {
+    return res.status(400).json({ message: "Thiếu ID hồ sơ." });
+  }
+
+  try {
+    if (userRole === "Admin" || userRole === "SuperAdmin") {
+      return res.status(403).json({
+        message: "Admin và SuperAdmin không được xóa hồ sơ nháp của khách",
+      });
+    }
+
+    let filter = { _id: profileId, isDraft: true }; // Chỉ xóa hồ sơ nháp
+    let registeredServiceIds = [];
+
+    if (userRole === "Manager") {
+      const managedServices = await RegisteredService.find({
+        $or: [{ managerUserId: userId }, { createdUserId: userId }],
+      });
+      const managedServiceIds = managedServices.map((service) => service._id);
+
+      // Lọc các hồ sơ mà manager quản lý hoặc họ tạo
+      filter.$or = [
+        { registeredService: { $in: managedServiceIds } },
+        { createdBy: userId },
+      ];
+    } else if (userRole === "Staff" || userRole === "Collaborator") {
+      const listRegisteredServices = await RegisteredService.find({
+        createdUserId: userId,
+      });
+
+      registeredServiceIds = listRegisteredServices.map(
+        (service) => service._id
+      );
+
+      filter.registeredService = { $in: registeredServiceIds };
+    }
+
+    const profileToDelete = await Profile.findOne(filter);
+    if (!profileToDelete) {
+      return res.status(404).json({
+        message: "Không tìm thấy hồ sơ nháp để xóa.",
+      });
+    }
+
+    await Promise.all([
+      RegisteredService.deleteOne({ _id: { $in: registeredServiceIds } }),
+      Profile.deleteOne(filter),
+    ]);
+
+    return res.status(200).json({
+      message: "Hồ sơ nháp đã được xóa thành công.",
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "Có lỗi xảy ra, vui lòng thử lại sau!" });
+  }
+};
+
 // Xem lịch sử chỉnh sửa hồ sơ đăng ký dịch vụ
 exports.getEditHistory = async (req, res) => {
   try {
