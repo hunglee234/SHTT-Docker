@@ -33,8 +33,6 @@ router.post(
   serviceController.registerServicebyAdmin
 );
 
-router.post("/c/duplicate/:profileId", serviceController.duplicateProfile);
-
 router.put(
   "/u/:profileId/general",
   upload.none(),

@@ -19,6 +19,7 @@ const registeredServiceSchema = new mongoose.Schema(
       required: false,
       default: null,
     },
+    isDraft: { type: Boolean, default: false },
   },
   {
     timestamps: true,

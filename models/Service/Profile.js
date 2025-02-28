@@ -100,6 +100,7 @@ const profileSchema = new mongoose.Schema(
       type: OwnerLetterSchema,
       required: false,
     },
+    isDraft: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -37,13 +37,11 @@ router.get(
   serviceController.getProfileDetails
 );
 
-// Quyền này dành cho nhân viên và manager
-// chỉ xóa phần đăng ký dịch vụ của khách
-// // Xóa dịch vụ (cần đăng nhập)
+// Xóa hồ sơ nháp từ phía khách hàng
 router.delete(
   "/list/:profileId",
   authenticateToken,
-  serviceController.deleteProfile
+  serviceController.deleteProfiledraft
 );
 
 module.exports = router;

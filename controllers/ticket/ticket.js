@@ -1,5 +1,6 @@
 const Ticket = require("../../models/Ticket/Ticket");
 const CategoryTicket = require("../../models/Ticket/CategoryTicket");
+const InfoAccount = require("../../models/Account/InfoStaff");
 const moment = require("moment");
 // Tạo ticket mới
 exports.createTicket = async (req, res) => {
@@ -63,10 +64,20 @@ exports.getAllTickets = async (req, res) => {
       ticketsQuery.message = { $regex: cleanSearchValue, $options: "i" };
     }
 
+    // Lấy danh sách nhân viên do userId quản lý (dựa vào trường `account`)
+    const managedStaff = await InfoAccount.find({
+      createdByManager: user.id,
+    }).select("account");
+
+    // Chuyển danh sách `account` thành mảng ID
+    const managedStaffIds = managedStaff.map((staff) =>
+      staff.account.toString()
+    );
+
     // Điều kiện xác định quyền truy cập của người dùng
     if (user.role === "SuperAdmin" || user.role === "Admin") {
     } else {
-      ticketsQuery.createdBy = user.id;
+      ticketsQuery.createdBy = { $in: [user.id, ...managedStaffIds] };
     }
 
     // Bộ lọc theo form_date và to_date (ngày tháng)
@@ -124,11 +135,12 @@ exports.getTicketById = async (req, res) => {
     if (!ticket) {
       return res.status(404).json({ error: "Ticket not found." });
     }
+
     if (
       user.role === "Admin" ||
       user.role === "SuperAdmin" ||
       user.role === "Manager" ||
-      user.role === "Employee" ||
+      user.role === "Staff" ||
       user.role === "Collaborator" ||
       ticket.createdBy.toString() === user.id
     ) {
@@ -146,12 +158,22 @@ exports.getTicketByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
-    let ticketQuery = {
-      createdBy: userId,
-    };
-
     const skip = (page - 1) * limit;
+    // Lấy danh sách nhân viên do userId quản lý (dựa vào trường `account`)
+    const managedStaff = await InfoAccount.find({
+      createdByManager: userId,
+    }).select("account");
+
+    // Chuyển danh sách `account` thành mảng ID
+    const managedStaffIds = managedStaff.map((staff) =>
+      staff.account.toString()
+    );
+
+    // Xây dựng truy vấn: lấy ticket của userId và nhân viên họ quản lý
+    let ticketQuery = { createdBy: { $in: [userId, ...managedStaffIds] } };
+
     const ticketCustomer = await Ticket.find(ticketQuery)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .populate({
