@@ -1460,10 +1460,7 @@ exports.deleteProfiledraft = async (req, res) => {
       });
     }
 
-    let filter = {
-      _id: profileId,
-      $or: [{ isDraft: true }, { status: "Chờ duyệt" }],
-    }; // Chỉ xóa hồ sơ nháp
+    let filter = { _id: profileId }; // Chỉ xóa hồ sơ nháp
     let registeredServiceIds = [];
 
     if (userRole === "Manager") {
@@ -1488,6 +1485,9 @@ exports.deleteProfiledraft = async (req, res) => {
 
       filter.registeredService = { $in: registeredServiceIds };
     }
+
+    // Chỉ xóa nếu hồ sơ là "Nháp" hoặc "Chờ duyệt"
+    filter.$and = [{ $or: [{ isDraft: true }, { status: "Chờ duyệt" }] }];
 
     const profileToDelete = await Profile.findOne(filter);
     if (!profileToDelete) {
