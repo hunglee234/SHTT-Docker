@@ -1030,6 +1030,16 @@ exports.updateDetailsProfile = async (req, res) => {
 
     profile.represent = infoRepresent;
     profile.brand = infoBrand;
+
+    if (profile.isDraft) {
+      profile.isDraft = false;
+    }
+
+    await RegisteredService.findOneAndUpdate(
+      { _id: { $in: registeredServiceIds }, isDraft: true },
+      { $set: { isDraft: false } }
+    );
+
     if (imageId) {
       profile.image = imageId;
     }
@@ -1107,6 +1117,9 @@ exports.getProfileList = async (req, res) => {
     let registeredServiceIds = [];
     let serviceQuery = {};
 
+    if (userRole === "Admin" || userRole === "SuperAdmin") {
+      filter.isDraft = false; // Chỉ hiển thị profile có isDraft: false
+    }
     if (userRole === "Manager") {
       const managedServices = await RegisteredService.find({
         $or: [{ managerUserId: userId }, { createdUserId: userId }],
@@ -1466,6 +1479,7 @@ exports.getEditHistory = async (req, res) => {
 };
 
 exports.getProfileSVByUserId = async (req, res) => {
+  const userRole = req.user.role;
   try {
     const { userId } = req.params;
     const { page = 1, limit = 10 } = req.query;
@@ -1495,9 +1509,14 @@ exports.getProfileSVByUserId = async (req, res) => {
       (service) => service.serviceId
     );
 
-    const profiles = await Profile.find({
-      registeredService: { $in: serviceIds },
-    })
+    let profileQuery = { registeredService: { $in: serviceIds } };
+
+    // 🔴 Nếu là SuperAdmin hoặc Admin, loại bỏ các bản nháp (draft: true)
+    if (["SuperAdmin", "Admin"].includes(userRole)) {
+      profileQuery.isDraft = { $ne: true }; // Loại bỏ các hồ sơ có draft: true
+    }
+
+    const profiles = await Profile.find(profileQuery)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -1581,6 +1600,12 @@ exports.duplicateProfile = async (req, res) => {
   const userRole = req.user.role;
   const { profileId } = req.params;
   try {
+    // Chặn Admin và Superadmin tạo bản sao hồ sơ
+    if (userRole === "Admin" || userRole === "SuperAdmin") {
+      return res
+        .status(403)
+        .json({ message: "Admin và SuperAdmin không được sao chép hồ sơ." });
+    }
     let filter = {};
     let registeredServiceIds = [];
 
@@ -1638,6 +1663,7 @@ exports.duplicateProfile = async (req, res) => {
         _id: new mongoose.Types.ObjectId(), // Tạo ObjectId mới
         createdAt: new Date(), // Thời gian mới
         updatedAt: new Date(),
+        isDraft: true,
       });
 
       // Lưu bản sao vào database
@@ -1651,16 +1677,17 @@ exports.duplicateProfile = async (req, res) => {
       _id: new mongoose.Types.ObjectId(), // ID mới
       registeredService: newRegisteredServiceID, // Liên kết với RegisteredService mới
       brand: originalProfile.brand
-        ? `${originalProfile.brand} Copy`
-        : "No Brand Copy", // Thêm chữ "copy" vào brand
+        ? `${originalProfile.brand} Bản nháp`
+        : "Chưa có nhãn hiệu ( Bản nháp )", // Thêm chữ "Bản nháp" vào brand
       createdAt: new Date(), // Cập nhật thời gian mới
+      isDraft: true,
     });
 
     // 4. Lưu Profile mới vào database
     await duplicatedProfile.save();
 
     res.status(201).json({
-      message: "Sao chép hồ sơ thành công",
+      message: "Dữ liệu",
       profile: duplicatedProfile,
     });
   } catch (error) {
