@@ -1,19 +1,29 @@
+const mongoose = require("mongoose");
+const dayjs = require("dayjs");
 const Procedure = require("../../models/Procedure");
 const Account = require("../../models/Account/Account");
 // Thêm thủ tục
 exports.createProcedure = async (req, res) => {
   try {
-    const nameProce = req.body.name || [];
+    const { nameProce, categoryId, submissionTime, reviewTime } = req.body;
     const txtFile = req.files["txtFile"]
       ? req.files["txtFile"][0].location
       : null;
 
     const otherFile = req.files["File"] ? req.files["File"][0].location : null;
 
+    // Kiểm tra và chuyển đổi categoryId thành ObjectId hợp lệ hoặc null
+    const validCategoryId = mongoose.Types.ObjectId.isValid(categoryId)
+      ? new mongoose.Types.ObjectId(categoryId)
+      : null;
+
     const procedure = await Procedure.create({
       name: nameProce,
       txtUrl: txtFile,
       fileUrl: otherFile,
+      categoryId: validCategoryId,
+      submissionTime,
+      reviewTime,
     });
     res
       .status(201)
@@ -28,12 +38,17 @@ exports.createProcedure = async (req, res) => {
 // Sửa thủ tục
 exports.updateProcedure = async (req, res) => {
   const { procedureId } = req.params;
-  const nameProce = req.body.name;
+  const { nameProce, categoryId, submissionTime, reviewTime } = req.body;
   const txtFile = req.files["txtFile"]
     ? req.files["txtFile"][0].location
     : null;
 
   const otherFile = req.files["File"] ? req.files["File"][0].location : null;
+
+  // Kiểm tra và chuyển đổi categoryId thành ObjectId hợp lệ hoặc null
+  const validCategoryId = mongoose.Types.ObjectId.isValid(categoryId)
+    ? new mongoose.Types.ObjectId(categoryId)
+    : null;
 
   try {
     const currentProcedure = await Procedure.findById(procedureId);
@@ -45,6 +60,9 @@ exports.updateProcedure = async (req, res) => {
       name: nameProce || currentProcedure.name,
       txtUrl: txtFile || currentProcedure.txtUrl,
       fileUrl: otherFile || currentProcedure.fileUrl,
+      categoryId: validCategoryId || currentProcedure.categoryId,
+      submissionTime: submissionTime || currentProcedure.submissionTime,
+      reviewTime: reviewTime || currentProcedure.reviewTime,
     };
 
     const procedure = await Procedure.findByIdAndUpdate(
@@ -103,9 +121,9 @@ exports.getAllProcedures = async (req, res) => {
       procedureQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const procedures = await Procedure.find(procedureQuery)
-      .select("name txtUrl fileUrl createdAt")
-      .sort({ createdAt: -1 });
+    const procedures = await Procedure.find(procedureQuery).sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       message: "Danh sách thủ tục:",
