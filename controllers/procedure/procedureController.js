@@ -156,3 +156,27 @@ exports.getProcedureDetails = async (req, res) => {
       .json({ message: "Lỗi khi lấy chi tiết thủ tục!", error: error.message });
   }
 };
+
+// Xem danh sách thủ tục dựa theo categoryID
+exports.getProceduresByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const procedures = await Procedure.find({ categoryId });
+
+    if (!procedures.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Không có thủ tục nào trong danh mục này",
+      });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Danh sách thủ tục theo CategoryID", data: procedures });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi khi lấy danh sách thủ tục",
+      error,
+    });
+  }
+};

@@ -513,6 +513,7 @@ exports.registerService = async (req, res) => {
     if (!service) {
       return res.status(404).json({ message: "Dịch vụ không tồn tại!" });
     }
+
     // console.log("Đây là id dịch vụ theo form ", service._id);
 
     const infoData = JSON.parse(req.body.info || "[]");

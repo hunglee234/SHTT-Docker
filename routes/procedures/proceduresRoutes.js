@@ -28,6 +28,9 @@ router.delete("/:procedureId", ProcedureController.deleteProcedure);
 // Xem danh sách thủ tục
 router.get("/", ProcedureController.getAllProcedures);
 
+// Xem danh sách thủ tục dựa theo categoryID
+router.get("/c/:categoryId", ProcedureController.getProceduresByCategory);
+
 // Xem chi tiết thủ tục theo ID
 router.get("/:procedureId", ProcedureController.getProcedureDetails);
 
