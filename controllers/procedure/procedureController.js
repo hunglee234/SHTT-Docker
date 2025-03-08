@@ -193,6 +193,7 @@ exports.getProceduresByCategory = async (req, res) => {
     }
 
     const procedures = await Procedure.find(procedureQuery)
+      .populate("categoryId", "categoryName")
       .skip(skip)
       .limit(parseInt(limit));
 
