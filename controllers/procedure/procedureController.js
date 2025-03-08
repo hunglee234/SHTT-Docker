@@ -123,6 +123,7 @@ exports.getAllProcedures = async (req, res) => {
 
     const skip = (page - 1) * limit;
     const procedures = await Procedure.find(procedureQuery)
+      .populate("categoryId", "categoryName")
       .sort({
         createdAt: -1,
       })
@@ -193,6 +194,7 @@ exports.getProceduresByCategory = async (req, res) => {
     }
 
     const procedures = await Procedure.find(procedureQuery)
+      .populate("categoryId", "categoryName")
       .skip(skip)
       .limit(parseInt(limit));
 
