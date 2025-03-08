@@ -123,6 +123,7 @@ exports.getAllProcedures = async (req, res) => {
 
     const skip = (page - 1) * limit;
     const procedures = await Procedure.find(procedureQuery)
+      .populate("categoryId", "categoryName")
       .sort({
         createdAt: -1,
       })
