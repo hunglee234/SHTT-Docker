@@ -154,7 +154,10 @@ exports.getAllProcedures = async (req, res) => {
 exports.getProcedureDetails = async (req, res) => {
   const { procedureId } = req.params;
   try {
-    const procedure = await Procedure.findById(procedureId);
+    const procedure = await Procedure.findById(procedureId).populate(
+      "categoryId",
+      "categoryName"
+    );
     if (!procedure) {
       return res.status(404).json({ message: "Không tìm thấy thủ tục!" });
     }
