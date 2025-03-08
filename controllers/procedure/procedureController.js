@@ -109,7 +109,7 @@ exports.deleteProcedure = async (req, res) => {
 // Xem danh sách thủ tục
 exports.getAllProcedures = async (req, res) => {
   try {
-    const { search_value } = req.query;
+    const { search_value, page = 1, limit = 10 } = req.query;
     let procedureQuery = {};
 
     if (
@@ -121,13 +121,23 @@ exports.getAllProcedures = async (req, res) => {
       procedureQuery.name = { $regex: cleanSearchValue, $options: "i" };
     }
 
-    const procedures = await Procedure.find(procedureQuery).sort({
-      createdAt: -1,
-    });
+    const skip = (page - 1) * limit;
+    const procedures = await Procedure.find(procedureQuery)
+      .sort({
+        createdAt: -1,
+      })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalProcedures = await Procedure.countDocuments(procedureQuery);
+    const totalPages = Math.ceil(totalProcedures / limit);
 
     res.status(200).json({
       message: "Danh sách thủ tục:",
       data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalProcedures: totalProcedures,
         procedures: procedures,
       },
     });
@@ -161,18 +171,41 @@ exports.getProcedureDetails = async (req, res) => {
 exports.getProceduresByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const procedures = await Procedure.find({ categoryId });
+    let { page = 1, limit = 10 } = req.query;
+    const skip = (page - 1) * limit;
 
-    if (!procedures.length) {
+    // Kiểm tra nếu categoryId không hợp lệ
+    if (!categoryId) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu Category ID",
+      });
+    }
+
+    const procedureQuery = { categoryId };
+    const totalProcedures = await Procedure.countDocuments(procedureQuery);
+
+    if (totalProcedures === 0) {
       return res.status(404).json({
         success: false,
         message: "Không có thủ tục nào trong danh mục này",
       });
     }
 
-    res
-      .status(200)
-      .json({ message: "Danh sách thủ tục theo CategoryID", data: procedures });
+    const procedures = await Procedure.find(procedureQuery)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalPages = Math.ceil(totalProcedures / limit);
+    res.status(200).json({
+      message: "Danh sách thủ tục theo CategoryID",
+      data: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalProcedures: totalProcedures,
+        procedures: procedures,
+      },
+    });
   } catch (error) {
     res.status(500).json({
       message: "Lỗi khi lấy danh sách thủ tục",
