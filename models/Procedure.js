@@ -14,6 +14,19 @@ const ProcedureSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "CategoryService",
+      required: false,
+    },
+    submissionTime: {
+      type: String, // Thời gian nộp hồ sơ
+      required: false,
+    },
+    reviewTime: {
+      type: String, // Thời gian thẩm định
+      required: false,
+    },
   },
   { timestamps: true }
 );
