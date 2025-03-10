@@ -193,6 +193,7 @@ exports.getProceduresByCategory = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Không có thủ tục nào trong danh mục này",
+        data: "",
       });
     }
 
