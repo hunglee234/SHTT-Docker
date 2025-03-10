@@ -189,11 +189,11 @@ exports.getProceduresByCategory = async (req, res) => {
     const procedureQuery = { categoryId };
     const totalProcedures = await Procedure.countDocuments(procedureQuery);
 
-    if (totalProcedures === 0) {
+    if (totalProcedures.length === 0) {
       return res.status(404).json({
         success: false,
         message: "Không có thủ tục nào trong danh mục này",
-        data: "",
+        data: [],
       });
     }
 
