@@ -22,15 +22,13 @@ RUN npm rebuild bcrypt --build-from-source && npm cache clean --force
 # Stage 2: Production stage - Chỉ giữ lại mã nguồn và dependencies cần thiết
 FROM node:18-slim
 
-# Thiết lập thư mục làm việc
 WORKDIR /app
 
-# Copy dependencies và mã nguồn từ builder stage
-COPY --from=builder /app/node_modules node_modules
-COPY --from=builder /app/package.json package.json
+# Copy toàn bộ mã nguồn vào container
+COPY --from=builder /app . 
 
-# Mở cổng 3001
-EXPOSE 3001
+# Mở cổng 3000
+EXPOSE 3000
 
 # Chạy ứng dụng
 CMD ["npm", "start"]
