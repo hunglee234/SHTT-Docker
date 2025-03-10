@@ -18,6 +18,7 @@ app.use(passport.initialize());
 
 app.use("/", authRoutes);
 
+//hahaha
 // Route dành cho admin
 app.use(
   "/admin",
