@@ -11,7 +11,12 @@ const categoryServiceSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-
+    // Hình ảnh
+    image: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "File",
+      default: null,
+    },
     // Mô tả thể loại dịch vụ
     description: {
       type: String,
