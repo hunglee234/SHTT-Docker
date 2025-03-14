@@ -5,7 +5,7 @@ const Account = require("../../models/Account/Account");
 const StaffAccount = require("../../models/Account/InfoStaff");
 const Counter = require("../../models/Counter");
 require("dotenv").config();
-const sendMail = require("../../controllers/email/emailController");
+const { sendMail } = require("../../controllers/email/emailController");
 const crypto = require("crypto");
 require("dotenv").config();
 
@@ -124,29 +124,47 @@ exports.register = async (req, res) => {
         });
       }
 
-      const existingEmail = await Account.findOne({ email });
+      const existingEmail = await Account.findOne({ email }).populate("role");
       if (existingEmail) {
-        return res.status(400).json({ message: "Email already exists" });
-      }
-      // Kiểm tra xem số điện thoại đã tồn tại chưa
-      const existingPhone = await StaffAccount.findOne({ phone: phoneNumber });
-      if (existingPhone) {
-        // Kiểm tra số điện thoại này có phải là của admin hay superadmin nữa không
-        const account = await Account.findById(existingPhone.account).populate(
-          "role"
-        );
-
-        // Nếu không phải Admin hoặc SuperAdmin, báo lỗi số điện thoại đã tồn tại
+        // Nếu email đã tồn tại nhưng không phải Admin hoặc SuperAdmin, báo lỗi
         if (
-          !account ||
-          !account?.role ||
-          (account?.role?.name !== "Admin" &&
-            account?.role?.name !== "SuperAdmin")
+          !existingEmail.role ||
+          !["Admin", "SuperAdmin"].includes(existingEmail.role.name)
+        ) {
+          return res.status(400).json({
+            message: "Email already exists",
+          });
+        }
+      }
+
+      // Kiểm tra xem số điện thoại đã tồn tại chưa
+      const existingPhone = await StaffAccount.findOne({
+        phone: phoneNumber,
+      }).populate({
+        path: "account",
+        populate: { path: "role" },
+      });
+
+      if (existingPhone) {
+        // Kiểm tra nếu tài khoản không tồn tại hoặc role không phải Admin/SuperAdmin
+        if (
+          !existingPhone.account ||
+          !existingPhone.account.role ||
+          !["Admin", "SuperAdmin"].includes(existingPhone.account.role.name)
         ) {
           return res.status(400).json({
             message: "Phone number already exists",
           });
         }
+      }
+
+      const existingTaxcodeAsPhone = await StaffAccount.findOne({
+        MST: phoneNumber,
+      });
+      if (existingTaxcodeAsPhone) {
+        return res
+          .status(400)
+          .json({ message: "Phone number matches an existing tax code" });
       }
 
       // Tìm vai trò mặc định "Manager"
@@ -201,6 +219,15 @@ exports.register = async (req, res) => {
       const existingTaxcode = await StaffAccount.findOne({ MST: taxCode });
       if (existingTaxcode) {
         return res.status(400).json({ message: "Tax code already exists" });
+      }
+
+      const existingPhoneAsTaxcode = await StaffAccount.findOne({
+        phone: taxCode,
+      });
+      if (existingPhoneAsTaxcode) {
+        return res
+          .status(400)
+          .json({ message: "Tax code matches an existing phone number" });
       }
 
       const existingEmail = await Account.findOne({ email });
@@ -267,10 +294,23 @@ exports.logout = (req, res) => {
 
 exports.forgotpassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    const account = await Account.findOne({ email });
-    if (!account)
+    const { email, type } = req.body;
+
+    // Tìm tài khoản có email và lấy thông tin role bằng populate()
+    const account = await Account.findOne({ email }).populate("role");
+    if (!account) {
       return res.status(400).json({ message: "Email không tồn tại!" });
+    }
+
+    // Kiểm tra role theo type
+    if (
+      (type === "client" && account.role.name !== "Manager") ||
+      (type === "cms" && !["Admin", "SuperAdmin"].includes(account.role.name))
+    ) {
+      return res.status(403).json({
+        message: "Không tìm thấy tài khoản phù hợp với thông tin cung cấp!",
+      });
+    }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -301,11 +341,21 @@ exports.forgotpassword = async (req, res) => {
 // Xác nhận mã code
 exports.verifycode = async (req, res) => {
   try {
-    const { email, code } = req.body;
-    const account = await Account.findOne({ email });
+    const { email, code, type } = req.body;
+    const account = await Account.findOne({ email }).populate("role");
 
     if (!account)
       return res.status(400).json({ message: "Email không tồn tại!" });
+
+    // Kiểm tra role theo type
+    if (
+      (type === "client" && account.role.name !== "Manager") ||
+      (type === "cms" && !["Admin", "SuperAdmin"].includes(account.role.name))
+    ) {
+      return res.status(403).json({
+        message: "Không tìm thấy tài khoản phù hợp với thông tin cung cấp!",
+      });
+    }
 
     // Mã hóa mã code người dùng nhập vào để kiểm tra
     const hashedCode = crypto.createHash("sha256").update(code).digest("hex");
@@ -320,7 +370,7 @@ exports.verifycode = async (req, res) => {
     }
 
     // Tạo token cho bước đặt lại mật khẩu
-    const token = jwt.sign({ id: account._id }, process.env.SECRET_KEY, {
+    const token = jwt.sign({ id: account._id, type }, process.env.SECRET_KEY, {
       expiresIn: "15m",
     });
 
@@ -336,12 +386,34 @@ exports.verifycode = async (req, res) => {
 // Đặt lại mật khẩu
 exports.resetpassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, newPassword, type } = req.body;
     let accountInfo = null;
     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-    const account = await Account.findById(decoded.id);
+    const account = await Account.findById(decoded.id).populate("role");
     if (!account)
       return res.status(400).json({ message: "Người dùng không tồn tại!" });
+
+    // So sánh `type` trong token với `type` từ FE gửi lên
+    if (decoded.type !== type) {
+      return res.status(403).json({
+        message: "Không tìm thấy tài khoản",
+      });
+    }
+
+    // Kiểm tra quyền theo `type`
+    if (type === "client" && account.role.name !== "Manager") {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền đặt lại mật khẩu!" });
+    }
+    if (
+      type === "cms" &&
+      !["Admin", "SuperAdmin"].includes(account.role.name)
+    ) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền đặt lại mật khẩu!" });
+    }
 
     accountInfo = await StaffAccount.findOne({ account: account._id }).populate(
       "account"
