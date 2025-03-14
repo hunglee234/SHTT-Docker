@@ -9,41 +9,36 @@ const sendMail = require("../../controllers/email/emailController");
 const crypto = require("crypto");
 require("dotenv").config();
 
-exports.login2 = async (req, res) => {
+const loginUser = async (req, res, roleFilter) => {
   const { identifier, password } = req.body; // `identifier` là MST hoặc SDT
+
   try {
-    let accountInfo = null;
-    // Tìm MST hoặc SDT trong InfoAccount
-    async function getAccountInfo(identifier) {
-      let accountInfo = await StaffAccount.findOne({
-        phone: identifier,
-      }).populate("account");
+    // Truy vấn tất cả tài khoản khớp với identifier
+    const accounts = await StaffAccount.find({
+      $or: [{ phone: identifier }, { MST: identifier }],
+    }).populate({
+      path: "account",
+      populate: { path: "role" },
+    });
 
-      // Nếu không tìm thấy theo phone, tiếp tục tìm theo MST
-      if (!accountInfo) {
-        accountInfo = await StaffAccount.findOne({ MST: identifier }).populate(
-          "account"
-        );
-      }
-
-      return accountInfo;
+    if (!accounts.length) {
+      return res.status(404).json({ message: "Account not found." });
     }
 
-    // Sử dụng
-    accountInfo = await getAccountInfo(identifier);
+    // Lọc ra tài khoản có vai trò phù hợp
+    const validAccounts = accounts.filter(
+      (acc) =>
+        acc.account && acc.account.role && roleFilter(acc.account.role.name)
+    );
 
-    // Kiểm tra nếu không tìm thấy tài khoản
-    if (!accountInfo || !accountInfo.account) {
+    if (!validAccounts.length) {
       return res
         .status(404)
-        .json({ message: "Account not found. Please check your identifier." });
+        .json({ message: "No account with the required role found." });
     }
 
-    // Truy cập vào bảng Account thông qua khóa ngoại
+    const accountInfo = validAccounts[0]; // Chọn tài khoản đầu tiên phù hợp
     const account = accountInfo.account;
-    const roleAccount = await Account.findOne({ _id: account._id }).populate(
-      "role"
-    );
 
     // Kiểm tra mật khẩu
     const isPasswordValid = await bcrypt.compare(password, account.password);
@@ -53,10 +48,7 @@ exports.login2 = async (req, res) => {
 
     // Tạo token JWT
     const token = jwt.sign(
-      {
-        id: account._id,
-        role: roleAccount.role.name || roleAccount.role,
-      },
+      { id: account._id, role: account.role.name },
       process.env.SECRET_KEY,
       { expiresIn: "1h" }
     );
@@ -64,6 +56,7 @@ exports.login2 = async (req, res) => {
     account.token = token;
     await account.save();
 
+    // Lấy avatar (nếu có)
     const accountWithAvatar = await StaffAccount.findOne({
       account: account._id,
     }).populate({
@@ -71,20 +64,17 @@ exports.login2 = async (req, res) => {
       select: "url",
     });
 
-    // console.log(accountWithAvatar);
-    const avatarUrl = accountWithAvatar.avatar?.url || null;
-    // Trả về token và thông tin người dùng
     return res.json({
       message: "Login successful",
       token,
       account: {
         id: account._id,
-        avatar: avatarUrl,
+        avatar: accountWithAvatar?.avatar?.url || null,
         fullName: account.fullName || null,
         companyName: accountInfo.companyName || null,
         username: account.username,
         identifier,
-        role: roleAccount.role.name || roleAccount.role,
+        role: account.role.name,
         phone: accountInfo.phone || null,
         MST: accountInfo.MST || null,
         typeAccount: account.typeaccount,
@@ -94,6 +84,16 @@ exports.login2 = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Internal server error" });
   }
+};
+
+// Hàm đăng nhập cho Manager
+exports.loginManager = (req, res) => {
+  return loginUser(req, res, (role) => role === "Manager");
+};
+
+// Hàm đăng nhập cho Admin hoặc SuperAdmin
+exports.loginAdmin = (req, res) => {
+  return loginUser(req, res, (role) => ["Admin", "SuperAdmin"].includes(role));
 };
 
 async function getNextSequence(name) {
@@ -131,7 +131,22 @@ exports.register = async (req, res) => {
       // Kiểm tra xem số điện thoại đã tồn tại chưa
       const existingPhone = await StaffAccount.findOne({ phone: phoneNumber });
       if (existingPhone) {
-        return res.status(400).json({ message: "Phone number already exists" });
+        // Kiểm tra số điện thoại này có phải là của admin hay superadmin nữa không
+        const account = await Account.findById(existingPhone.account).populate(
+          "role"
+        );
+
+        // Nếu không phải Admin hoặc SuperAdmin, báo lỗi số điện thoại đã tồn tại
+        if (
+          !account ||
+          !account?.role ||
+          (account?.role?.name !== "Admin" &&
+            account?.role?.name !== "SuperAdmin")
+        ) {
+          return res.status(400).json({
+            message: "Phone number already exists",
+          });
+        }
       }
 
       // Tìm vai trò mặc định "Manager"
