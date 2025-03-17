@@ -78,6 +78,7 @@ const loginUser = async (req, res, roleFilter) => {
         phone: accountInfo.phone || null,
         MST: accountInfo.MST || null,
         typeAccount: account.typeaccount,
+        email: accountInfo.account.email,
       },
     });
   } catch (error) {
