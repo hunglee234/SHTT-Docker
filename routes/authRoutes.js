@@ -8,6 +8,7 @@ const {
   forgotpassword,
   verifycode,
   resetpassword,
+  changepassword,
 } = require("../controllers/auth/authController");
 
 // Đăng ký tài khoản mới
@@ -28,5 +29,8 @@ router.post("/forgot-password", forgotpassword);
 router.post("/verify-code", verifycode);
 // Đặt lại mật khẩu
 router.post("/reset-password", resetpassword);
+
+// Đổi mật khẩu
+router.post("/change-password", changepassword);
 
 module.exports = router;
