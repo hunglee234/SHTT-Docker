@@ -37,24 +37,14 @@ jobs:
     steps:
       - name: Setup kubeconfig
         run: |
-          mkdir -p $HOME/.kube  # Tạo thư mục nếu chưa có
+          mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config  # Đảm bảo quyền bảo mật
-        env:
-          KUBECONFIG: $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
 
       - name: Check Kubernetes Connection
         run: kubectl cluster-info
-        env:
-          KUBECONFIG: $HOME/.kube/config
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/my-app my-app=hunglkdocker/shtt-backend:$TAG
-          kubectl rollout restart deployment/my-app
-        env:
-          KUBECONFIG: $HOME/.kube/config
-
-      - name: Cleanup kubeconfig
-        if: always()
-        run: rm -f $HOME/.kube/config
+          kubectl delete pods --all
+          kubectl get pods
