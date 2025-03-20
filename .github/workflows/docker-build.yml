@@ -37,9 +37,9 @@ jobs:
     steps:
       - name: Setup kubeconfig
         run: |
-          mkdir -p $HOME/.kube  
-          echo "${{ secrets.KUBECONFIG }}" | base64 --decode > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
+          mkdir -p $HOME/.kube  # Tạo thư mục nếu chưa có
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config  # Đảm bảo quyền bảo mật
         env:
           KUBECONFIG: $HOME/.kube/config
 
