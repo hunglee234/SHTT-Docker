@@ -35,9 +35,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Setup kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/my-app my-app=hung2304/shtt-backend:$TAG
           kubectl rollout restart deployment/my-app
-        env:
-          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+
+      - name: Cleanup kubeconfig
+        if: always()
+        run: rm -f kubeconfig.yaml
