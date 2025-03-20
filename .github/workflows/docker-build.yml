@@ -36,14 +36,19 @@ jobs:
 
     steps:
       - name: Setup kubeconfig
-        run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=$(pwd)/kubeconfig.yaml
+        run: echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
+        env:
+          KUBECONFIG: kubeconfig.yaml # Gán biến môi trường cho toàn bộ job
+
+      - name: Check Kubernetes Connection
+        run: kubectl cluster-info
 
       - name: Deploy to Kubernetes
         run: |
-          kubectl set image deployment/my-app my-app=hung2304/shtt-backend:$TAG
+          kubectl set image deployment/my-app my-app=hunglkdocker/shtt-backend:$TAG
           kubectl rollout restart deployment/my-app
+        env:
+          KUBECONFIG: kubeconfig.yaml
 
       - name: Cleanup kubeconfig
         if: always()
