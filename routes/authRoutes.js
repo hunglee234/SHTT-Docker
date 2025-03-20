@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {
-  login2,
+  loginManager,
+  loginAdmin,
   register,
   logout,
   forgotpassword,
@@ -12,8 +13,11 @@ const {
 // Đăng ký tài khoản mới
 router.post("/register", register);
 
-// Đăng nhập
-router.post("/login", login2);
+// Đăng nhập Manager
+router.post("/login/manager", loginManager);
+
+// Đăng nhập Admin & Superadmin
+router.post("/login/admin", loginAdmin);
 
 // Đăng xuất
 router.post("/logout", logout);

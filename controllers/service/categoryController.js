@@ -1,11 +1,18 @@
 const CategoryService = require("../../models/Service/CategoryService");
 const Service = require("../../models/Service/Service");
 const Account = require("../../models/Account/Account");
-
+const { saveFile } = require("../../utils/saveFile");
 exports.createCategory = async (req, res) => {
   try {
     const { categoryName, description } = req.body;
 
+    let imageId = null;
+    if (req.file) {
+      const imageUrl = req.file.location;
+      const fileType = req.file.mimetype.includes("image") ? "image" : "pdf";
+
+      imageId = await saveFile(imageUrl, fileType);
+    }
     // Lấy thông tin tài khoản từ req.user (đã được middleware authenticateToken gắn vào)
     const userId = req.user.id;
 
@@ -25,18 +32,25 @@ exports.createCategory = async (req, res) => {
 
     // Kết hợp tên admin và vai trò
     const createdBy = account._id;
-    console.log();
     // Tạo danh mục với thông tin người tạo là tên admin + vai trò
     const newCategory = new CategoryService({
       categoryName,
       description,
+      image: imageId || null,
       createdBy,
     });
 
     const savedCategory = await newCategory.save();
+    const savedCategoryWithImage = await CategoryService.findById(
+      savedCategory._id
+    ).populate({
+      path: "image",
+      select: "url",
+    });
+
     res.status(201).json({
       message: "Category created successfully",
-      data: savedCategory,
+      data: savedCategoryWithImage,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -54,12 +68,15 @@ exports.getAllCategory = async (req, res) => {
     }
     const skip = (page - 1) * limit;
     const categories = await CategoryService.find(categoryQuery)
+      .populate({
+        path: "image",
+        select: "url",
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
       .lean()
       .exec();
-
     const totalCategories = await CategoryService.countDocuments(categoryQuery);
 
     if (!categories || categories.length === 0) {
@@ -78,6 +95,7 @@ exports.getAllCategory = async (req, res) => {
           id: category._id,
           name: category.categoryName,
           description: category.description,
+          image: category.image?.url || null,
           services: services.map((service) => ({
             id: service._id,
             name: service.serviceName,
@@ -104,7 +122,10 @@ exports.getAllCategory = async (req, res) => {
 exports.getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const category = await CategoryService.findById(id);
+    const category = await CategoryService.findById(id).populate({
+      path: "image",
+      select: "url",
+    });
 
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
@@ -127,6 +148,7 @@ exports.getCategoryById = async (req, res) => {
       id: category._id,
       name: category.categoryName,
       description: category.description,
+      image: category.image?.url || null,
       services: services.map((service) => ({
         id: service._id,
         name: service.serviceName,
@@ -154,6 +176,18 @@ exports.updateCategory = async (req, res) => {
     const { id } = req.params;
     const { categoryName, description } = req.body;
 
+    const existingCategory = await CategoryService.findById(id);
+    if (!existingCategory) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    let imageId = existingCategory.image;
+    if (req.file) {
+      const imageUrl = req.file.location;
+      const fileType = req.file.mimetype.includes("image") ? "image" : "pdf";
+
+      imageId = await saveFile(imageUrl, fileType);
+    }
     const userId = req.user.id;
     const account = await Account.findById(userId).populate("role");
     if (!account) {
@@ -177,6 +211,7 @@ exports.updateCategory = async (req, res) => {
       {
         categoryName,
         description,
+        image: imageId,
         updatedBy,
       },
       { new: true, runValidators: true } // Trả về document mới nhất sau khi cập nhật
@@ -187,10 +222,17 @@ exports.updateCategory = async (req, res) => {
       return res.status(404).json({ error: "Category not found" });
     }
 
+    const updatedCategoryFinal = await CategoryService.findById(
+      updatedCategory._id
+    ).populate({
+      path: "image",
+      select: "url",
+    });
+
     // Trả về danh mục đã được cập nhật
     res.status(200).json({
       message: "Category updated successfully",
-      data: updatedCategory,
+      data: updatedCategoryFinal,
     });
   } catch (error) {
     console.error("Error updating category:", error.message);
