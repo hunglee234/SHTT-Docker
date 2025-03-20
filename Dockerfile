@@ -24,6 +24,14 @@ FROM node:18-slim
 
 WORKDIR /app
 
+# Định nghĩa các biến build-time
+ARG NODE_ENV
+ARG API_URL
+
+# Sử dụng các biến môi trường này
+ENV NODE_ENV=$NODE_ENV
+ENV API_URL=$API_URL
+
 # Copy toàn bộ mã nguồn vào container
 COPY --from=builder /app . 
 
