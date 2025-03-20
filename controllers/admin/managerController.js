@@ -203,7 +203,7 @@ exports.getFullStaffList = async (req, res) => {
       });
     }
 
-    // Kiểm tra nếu không có nhân viên nào
+    // Kiểm tra nếu không có nhân viên nào hehe
     if (!staffAccounts || staffAccounts.length === 0) {
       return res
         .status(202)
