@@ -37,10 +37,11 @@ jobs:
     steps:
       - name: Setup kubeconfig
         run: |
+          mkdir -p $HOME/.kube  
           echo "${{ secrets.KUBECONFIG }}" | base64 --decode > $HOME/.kube/config
           chmod 600 $HOME/.kube/config
         env:
-          KUBECONFIG: $HOME/.kube/config # Gán kubeconfig cho toàn bộ job
+          KUBECONFIG: $HOME/.kube/config
 
       - name: Check Kubernetes Connection
         run: kubectl cluster-info
