@@ -1,28 +1,32 @@
-name: Build and Push to GHCR
+name: Deploy Docker App
 
 on:
   push:
     branches:
-      - main # Tự động chạy khi có code mới trên branch `main`
-  workflow_dispatch: # Cho phép chạy thủ công
+      - main
 
 jobs:
-  build-and-push:
+  deploy:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Login to DockerHub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-      - name: Build Docker Image
-        run: docker build -t ghcr.io/${{ github.repository }}/my-app:latest .
+      - name: Build & Push Docker Image
+        run: |
+          docker build -t mydockerhubusername/my-backend:latest .
+          docker push mydockerhubusername/my-backend:latest
 
-      - name: Push Docker Image
-        run: docker push ghcr.io/${{ github.repository }}/my-app:latest
+      - name: SSH vào server và deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker pull mydockerhubusername/my-backend:latest
+            docker-compose -f docker-compose-prod.yml up -d
