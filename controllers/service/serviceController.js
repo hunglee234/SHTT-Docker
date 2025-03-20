@@ -1211,9 +1211,12 @@ exports.getProfileList = async (req, res) => {
           ?.filter(
             (field) =>
               field &&
-              ["Nhóm dịch vụ", "Tên nhóm", "Phân loại (nếu có)"].includes(
-                field.name
-              )
+              [
+                "Nhóm dịch vụ",
+                "Tên nhóm",
+                "Phân loại (nếu có)",
+                "Phân loại",
+              ].includes(field.name)
           ) // Kiểm tra field tồn tại
           ?.map((field) => field.value.replace("Nhóm ", "")) || []; // Chỉ lấy số nhóm
 
@@ -1335,7 +1338,13 @@ exports.getProfileDetails = async (req, res) => {
     const logo =
       profile.info
         ?.flatMap((item) => item.fields)
-        ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+        ?.filter((field) =>
+          [
+            "Mẫu logo, nhãn hiệu",
+            "Bộ ảnh chụp/bản vẽ",
+            "Bản vẽ kỹ thuật",
+          ].includes(field.name)
+        )
         ?.map((field) => {
           // Kiểm tra xem giá trị có phải là URL hình ảnh không
           const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
