@@ -22,7 +22,7 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_NAME=hung2304/shtt-backend
+          IMAGE_NAME=hunglkdocker/shtt-backend
           TAG=$(date +%s)  # Tag theo timestamp
           BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
 
