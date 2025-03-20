@@ -1199,19 +1199,37 @@ exports.getProfileList = async (req, res) => {
 
     // xử lý mảng Trích xuất "Tên nhóm" từ info
     const extractedData = listProfile.map((profile) => {
+      // console.log("info Profile", profile.info);
+      // const authorInfo = profile.info.find(
+      //   (item) => item.type === "Sáng chế/giải pháp hữu ích"
+      // );
+
+      // console.log("Chi tiết các fields:", authorInfo.fields);
       const groupNames =
         profile.info
           ?.flatMap((item) => item.fields || []) // Đảm bảo item.fields là mảng
           ?.filter(
             (field) =>
-              field && ["Nhóm dịch vụ", "Tên nhóm"].includes(field.name)
+              field &&
+              [
+                "Nhóm dịch vụ",
+                "Tên nhóm",
+                "Phân loại (nếu có)",
+                "Phân loại",
+              ].includes(field.name)
           ) // Kiểm tra field tồn tại
           ?.map((field) => field.value.replace("Nhóm ", "")) || []; // Chỉ lấy số nhóm
 
       const logo =
         profile.info
           ?.flatMap((item) => item.fields || []) // Đảm bảo item.fields là mảng
-          ?.filter((field) => field && field.name === "Mẫu logo, nhãn hiệu") // Kiểm tra field tồn tại
+          ?.filter((field) =>
+            [
+              "Mẫu logo, nhãn hiệu",
+              "Bộ ảnh chụp/bản vẽ",
+              "Bản vẽ kỹ thuật",
+            ].includes(field.name)
+          ) // Kiểm tra field tồn tại
           ?.map((field) => {
             const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
             return { value: field.value, isImage };
@@ -1320,7 +1338,13 @@ exports.getProfileDetails = async (req, res) => {
     const logo =
       profile.info
         ?.flatMap((item) => item.fields)
-        ?.filter((field) => field.name === "Mẫu logo, nhãn hiệu")
+        ?.filter((field) =>
+          [
+            "Mẫu logo, nhãn hiệu",
+            "Bộ ảnh chụp/bản vẽ",
+            "Bản vẽ kỹ thuật",
+          ].includes(field.name)
+        )
         ?.map((field) => {
           // Kiểm tra xem giá trị có phải là URL hình ảnh không
           const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(field.value);
