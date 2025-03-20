@@ -436,3 +436,38 @@ exports.resetpassword = async (req, res) => {
     res.status(400).json({ message: "Token không hợp lệ hoặc đã hết hạn!" });
   }
 };
+
+exports.changepassword = async (req, res) => {
+  try {
+    const { email, type, oldPassword, newPassword } = req.body;
+
+    // Kiểm tra user có tồn tại không
+    const account = await Account.findOne({ email }).populate("role");
+    if (!account)
+      return res.status(400).json({ message: "Người dùng không tồn tại" });
+
+    // Kiểm tra role theo type
+    if (
+      (type === "client" && account.role.name !== "Manager") ||
+      (type === "cms" && !["Admin", "SuperAdmin"].includes(account.role.name))
+    ) {
+      return res.status(403).json({
+        message: "Không tìm thấy tài khoản phù hợp với thông tin cung cấp!",
+      });
+    }
+
+    // Kiểm tra mật khẩu cũ
+    const isMatch = await bcrypt.compare(oldPassword, account.password);
+    if (!isMatch)
+      return res.status(400).json({ message: "Mật khẩu cũ không chính xác" });
+
+    // Mã hóa mật khẩu mới và cập nhật
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    account.password = hashedPassword;
+    await account.save();
+
+    res.json({ message: "Thay đổi mật khẩu thành công" });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+};
