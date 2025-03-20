@@ -29,22 +29,3 @@ jobs:
           docker build -t $IMAGE_NAME:$TAG -t $IMAGE_NAME:$BRANCH_NAME .
           docker push $IMAGE_NAME:$TAG
           docker push $IMAGE_NAME:$BRANCH_NAME
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Setup kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Check Kubernetes Connection
-        run: kubectl cluster-info
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl delete pods --all
-          kubectl get pods
