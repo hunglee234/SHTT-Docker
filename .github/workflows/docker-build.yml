@@ -3,8 +3,8 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main # Chạy khi có push lên nhánh main
-  workflow_dispatch: # Cho phép chạy thủ công
+      - main
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -13,6 +13,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Load environment variables from .env
+        run: |
+          # Đọc các biến môi trường từ file .env và xuất chúng vào môi trường
+          set -o allexport
+          source .env
+          set +o allexport
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -26,6 +33,7 @@ jobs:
           TAG=latest  
           BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
 
-          docker build -t $IMAGE_NAME:$TAG -t $IMAGE_NAME:$BRANCH_NAME .
+          # Truyền các biến môi trường vào Docker build
+          docker build --build-arg NODE_ENV=$NODE_ENV --build-arg API_URL=$API_URL -t $IMAGE_NAME:$TAG -t $IMAGE_NAME:$BRANCH_NAME .
           docker push $IMAGE_NAME:$TAG
           docker push $IMAGE_NAME:$BRANCH_NAME
