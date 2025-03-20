@@ -3,16 +3,16 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - dev_hung_be # Chạy khi có push lên nhánh main
+      - main # Chạy khi có push lên nhánh main
   workflow_dispatch: # Cho phép chạy thủ công
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # Chạy trên máy ảo Ubuntu
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # Lấy code từ repo
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -22,11 +22,19 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE_NAME=hung2304/shtt-backend  # Thay bằng tên Docker image của bạn
-          TAG=latest  # Hoặc dùng `$(date +%s)` để tạo tag timestamp
-          docker build -t $IMAGE_NAME:$TAG .
-          docker push $IMAGE_NAME:$TAG
+          IMAGE_NAME=hung2304/shtt-backend
+          TAG=$(date +%s)  # Tag theo timestamp
+          BRANCH_NAME=$(echo "${GITHUB_REF#refs/heads/}" | tr '/' '-')
 
+          docker build -t $IMAGE_NAME:$TAG -t $IMAGE_NAME:$BRANCH_NAME .
+          docker push $IMAGE_NAME:$TAG
+          docker push $IMAGE_NAME:$BRANCH_NAME
+
+  deploy:
+    needs: build-and-push # Đảm bảo deploy chỉ chạy sau khi build xong
+    runs-on: ubuntu-latest
+
+    steps:
       - name: Deploy to Kubernetes
         run: |
           kubectl set image deployment/my-app my-app=hung2304/shtt-backend:$TAG
